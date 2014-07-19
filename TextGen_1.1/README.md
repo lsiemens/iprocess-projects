@@ -4,7 +4,7 @@ TextGen 1.1
 TextGen is a script to produce random text with statistical properties
 similar to the supplied training text. This Project is described in
 more detail in the blog post [The Making of a Markov Chain]
-(lsiemens.github.io/the-making-of-a-markov-chain/index.html).
+(http://lsiemens.github.io/the-making-of-a-markov-chain/index.html).
 
 The contents of this directory include,
 
