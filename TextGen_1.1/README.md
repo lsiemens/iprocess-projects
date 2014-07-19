@@ -18,4 +18,4 @@ The contents of this directory include,
 - full_text: The directory containing the full unmodified text used to
   produce the training text in the directory prepared_text.
 
-- LICENSE: A copy of the BSD-3 license TextGen 1.1 is released under.
+- LICENSE.md: A copy of the BSD-3 license TextGen 1.1 is released under.
