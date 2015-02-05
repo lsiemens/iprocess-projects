@@ -44,7 +44,7 @@ import random
 from time import time
 
 class markov_chain:
-    valid_chars = "abcdefghijklmnopqrstuvwxyz. "
+    valid_chars = "abcdefghijklmnopqrstuvwxyz. \n"
     
     def calculate_transitions(self, file_name, order):
         self.order = order
@@ -55,9 +55,9 @@ class markov_chain:
         text = ""
         for fname in self.file_name:
             with open(fname, 'r') as txt_file:
-                tmp = "".join(char for char in txt_file.read().lower() if char in self.valid_chars + "\n")
-                text += tmp.replace("\n", " ")
-#                text += "".join(char for char in txt_file.read().lower() if char in self.valid_chars)
+#                tmp = "".join(char for char in txt_file.read().lower() if char in self.valid_chars + "\n")
+#                text += tmp.replace("\n", " ")
+                text += "".join(char for char in txt_file.read().lower() if char in self.valid_chars)
         
         self.transitions = numpy.zeros((len(self.valid_chars), )*(order + 1))
             
@@ -73,7 +73,7 @@ class markov_chain:
         print "\nnormalizing the transition space.\n"
         self._normalize(self.transitions)
 
-    def generate_string(self, length, seed=""):
+    def generate_string(self, length, seed="", show_string = True):
         if len(seed) < self.order:
             raise ValueError("the length of the seed must be equal to the order")
         text = seed
@@ -86,7 +86,8 @@ class markov_chain:
                 text += self.choose_random(self.valid_chars, self.transitions)
         with open("out.txt", 'w') as txt_file:
             txt_file.write(text)
-        print text
+        if show_string:
+            print text
         
     def choose_random(self, items, probabilities):
         x = random.uniform(0, 1)
@@ -129,7 +130,14 @@ ext = ".txt"
 names = ["pg1268"]
 text_gen = markov_chain()
 
+import time
+start_time = time.clock()
+
 text_gen.calculate_transitions([dir+name+ext for name in names], 5)
+
+print("--- %s seconds ---" % (time.clock() - start_time))
+
 #text_gen.save("transition.data")
 #text_gen.load("transition.data")
-text_gen.generate_string(2000, "he said")
+
+text_gen.generate_string(2000, "he said", False)

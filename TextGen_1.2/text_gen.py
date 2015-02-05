@@ -1,8 +1,40 @@
+####
+#
+# Copyright (c) 2015, Luke Siemens
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright
+# notice, this list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright 
+# notice, this list of conditions and the following disclaimer in the 
+# documentation and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its 
+# contributors may be used to endorse or promote products derived from
+# this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A 
+# PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT 
+# HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY 
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+####
+
 """
+TextGen 1.2
 
-text generator 1.02
-
-Text is generated using a markov chain.
+This is a tool to generate random text using a markov chain.
 
 using sparse data storage.
 
@@ -14,14 +46,13 @@ import random
 from time import time
 import cPickle
 import sdata
+import os
 
 class markov_chain:
     def __init__(self):
-#        self.valid_chars = "cepwoftdn, =1234567890\n"
-        self.valid_chars = "abcdefghijklmnopqrstuvwxyz. "
+        self.valid_chars = "abcdefghijklmnopqrstuvwxyz. \n"
         self.order = 0
-        self.transitions = sdata.sdata()
-    
+        self.transitions = sdata.sdata()    
     
     def calculate_transitions(self, file_name, order, calculate_transitions=True):
         self.order = order
@@ -51,7 +82,7 @@ class markov_chain:
             print "\nnormalizing the transition space.\n"
             self.transitions._normalize(self.valid_chars)
 
-    def generate_string(self, length, seed=""):
+    def generate_string(self, length, seed="", show_string = True):
         if seed == "":
             seed = self.text[:self.order]
         if len(seed) < self.order:
@@ -66,7 +97,8 @@ class markov_chain:
                 text += self.choose_random(self.valid_chars, self.transitions)
         with open("out.txt", 'w') as txt_file:
             txt_file.write(text)
-        print text
+        if show_string:
+            print text
         
     def choose_random(self, items, probabilities):
         x = random.uniform(0, 1)
@@ -112,21 +144,25 @@ class markov_chain:
             if sum != 0:
                 array[:] /= sum
 
-dir = "raw_text//HGWells//"
-#dir = "raw_text//"
+dir = "prepared_text//"
+#dir = "full_text//"
 ext = ".txt"
-order = 8
+order = 16
 transitions_file = "transition_hgwells_order_"+str(order)
 calculate = True
 
-names = open(dir+"f_names.txt", 'r').read().split('\n')
-#names = ["portal"]
+names = ["pg1268"]
 text_gen = markov_chain()
 
 if calculate:
+    import time
+    start_time = time.clock()
+
     text_gen.calculate_transitions([dir+name+ext for name in names], order)
+
+    print("--- %s seconds ---" % (time.clock() - start_time))
 #    text_gen.save(dir + transitions_file + ".data")
 #else:
 #    text_gen.calculate_transitions([dir+name+ext for name in names], 0, False)
 #    text_gen.load(dir + transitions_file + ".data")
-    text_gen.generate_string(2000)
+    text_gen.generate_string(4000, show_string=False)
