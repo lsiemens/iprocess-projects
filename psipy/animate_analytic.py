@@ -13,7 +13,7 @@ License: BSD
 import matplotlib.pyplot as plt
 from matplotlib import animation
 import numpy as np
-from schrodinger import Schrodinger
+import analytic
 import units
 
 ######################################################################
@@ -24,7 +24,6 @@ def gauss_x(x, a, x0, k0):
     """
     return ((a * np.sqrt(np.pi)) ** (-0.5)
             * np.exp(-0.5 * ((x - x0) * 1. / a) ** 2 + 1j * x * k0))
-
 
 def gauss_p(p, a, x0, p0):
     """
@@ -45,7 +44,6 @@ def theta(x):
     y[x > 0] = 1.0
     return y
 
-
 def square_barrier(x, width, height):
     return height * (theta(x) - theta(x - width))
 
@@ -55,84 +53,85 @@ def square_barrier(x, width, height):
 unit_sys = units.units(10**-12, mode = "abs")
 _T = unit_sys.get_T()
 _T.set_format("{:1.3e}")
+_E = unit_sys.get_E()
 
 # specify time steps and duration
-dt = 0.01
-N_steps = 50
-t_max = 1000000
-ylim = (0, 0.13*0.13)
-frames = 100
+dt = 0.00041
+N_steps = 100
+t_max = 120
+ylim = (-2.0, 2.0)
+frames = int(100)
 
 # specify constants
-m = 1.0      # particle mass
+hbar = 1.0   # planck's constant
+m = 2.0      # particle mass
 
 # specify range in x coordinate
-fac = 1
-N = 2 ** (11 + fac)
-dx = 0.1*2**(-fac)
+N = 2 ** 13
+dx = 6.0 / float(N)
 x = dx * (np.arange(N) - 0.5 * N)
 
 # specify potential
-V_x = square_barrier(x, 1.5, 0)#.5)
-V_x[x < -98] = 1E0
-V_x[x > 98] = 1E0
+V0 = 1.5
+L = x[-1]-x[0]
+a = 3 * L
+x0 = -60 * L
+V_x = square_barrier(x, a, 0.5)
+#V_x[x < -0.49] = 1E6
+#V_x[x > 0.49] = 1E6
 
+# specify initial momentum and quantities derived from it
+p0 = np.sqrt(2 * m * 0.2 * V0)
+dp2 = p0 * p0 * 1. / 80
+d = hbar / np.sqrt(2 * dp2)
+
+v0 = p0 / m
 psi_x0 = gauss_x(x, 10, -50, 0.5)
-#psi_x0 = np.cos(np.pi*x/(2*98))
-#psi_x0 =psi_x0 + np.cos(3*np.pi*x/(2.0*98))
 
 # define the Schrodinger object which performs the calculations
-S = Schrodinger(x=x,
-                psi_x0=psi_x0,
-                V_x=V_x,
-                m=m)
+S = analytic.harmonic_well(x=x, k=4000.0, m=m, dt=dt, L=L)
 
+#S.eigenbasis(130, np.sqrt(2/float(L))*np.cos(11*np.pi*x/L+0.2))
+S.eigenbasis(50, gauss_x(x, 0.15, 0, 0))
+#S.eigenbasis(151, square_barrier(x+L/4.0, L/2, 1))
+#S.add_eigenstate([1,3,6,7,4], [1.0,2.0,3.5,4.1,5.7])
+#S.add_eigenstate([3,4], [1.0,1.0])
+#S.add_eigenstate([1], [1.0j])
+
+print 1*_E
+print S.get_energy_n(3)*_E
+print S.get_energy_n(4)*_E
 ######################################################################
+
 # Set up plot
 fig = plt.figure()
 
 # plotting limits
-xlim = (-100, 100)
-print S.p
-plim = (-5, 5)
+xlim = (-3, 3)
+plim = (-28, 28)
 
 # top axes show the x-space data
-ax1 = fig.add_subplot(211, xlim=xlim, ylim=ylim)
-psi_x_line, = ax1.plot(S.x, S.psi_x, c='r', label=r'$|\psi(x)|$')
-V_x_line, = ax1.plot(S.x, S.psi_x, c='k', label=r'$V(x)$')
-center_line = ax1.axvline(0, c='k', ls=':', label=r"$x_0 + v_0t$")
+ax1 = fig.add_subplot(111, xlim=xlim, ylim=ylim)
+psi_x_line, = ax1.plot([], [], c='r', label=r'$|\psi(x)|$')
 
-time = ax1.text(0,0,"")
+time = ax1.text(0, 0, "")
 ax1.legend(prop=dict(size=12))
 ax1.set_xlabel('$x$')
 ax1.set_ylabel(r'$|\psi(x)|$')
-
-# bottom axes show the k-space data
-ax2 = fig.add_subplot(212, xlim=plim, ylim=(-1, 5.5))
-psi_p_line, = ax2.plot([], [], c='r', label=r'$|\psi(p)|$')
-
-ax2.legend(prop=dict(size=12))
-ax2.set_xlabel('$p$')
-ax2.set_ylabel(r'$|\psi(p)|$')
 
 ######################################################################
 # Functions to Animate the plot
 def init():
     psi_x_line.set_data([], [])
-    V_x_line.set_data([], [])
-
-    psi_p_line.set_data([], [])
     time.set_text("")
-    return (psi_x_line, V_x_line, psi_p_line, time)
+    return (psi_x_line, time)
 
 def animate(i):
-    S.time_step(dt, N_steps)
-    psi_x_line.set_data(S.x, np.real(np.conj(S.psi_x)*S.psi_x))
-    V_x_line.set_data(S.x, S.V_x)
-
-    psi_p_line.set_data(S.p, abs(S.psi_p))
+    psi = S.animate()
+    psi = np.real(np.conj(psi)*psi)
+    psi_x_line.set_data(S.x, psi)
     time.set_text("t = " + str(abs(S.t)*_T))
-    return (psi_x_line, V_x_line, psi_p_line, time)
+    return (psi_x_line, time)
 
 # call the animator.
 # blit=True means only re-draw the parts that have changed.
