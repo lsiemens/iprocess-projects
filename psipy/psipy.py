@@ -1,3 +1,36 @@
+####
+#
+# Copyright (c) 2015, Luke Siemens
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright
+# notice, this list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright 
+# notice, this list of conditions and the following disclaimer in the 
+# documentation and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its 
+# contributors may be used to endorse or promote products derived from
+# this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A 
+# PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT 
+# HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY 
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+####
+
 """
 A numerical solver for the 2D time dependent schrodinger equation.
 """
@@ -9,70 +42,11 @@ class psipy:
     """
     
     Numericaly solve the time dependent shrodinger equation in
-    one dimension.
+    two dimensions.
 
     """
     
     def __init__(self, x, psi_t0, V, k0):
-        self._x = x
-        self._V = V
-        self._k0 = k0
-        
-        self._N = len(self._x)
-        self._t = 0.0
-        self._dt = None
-        self._dx = self._x[1] - self._x[0]
-        self._dk = 2*numpy.pi / (self._N * self._dx)
-        self._k = self._k0 + self._dk*numpy.arange(self._N)
-        
-        self._psi_x = None
-        self._psi_k = None
-        
-        self._x_half_step = None
-        self._x_step = None
-        self._k_step = None
-
-        self.set_psi_x(psi_t0)
-    
-    def get_psi_x(self):
-        return self._psi_x*numpy.exp(1j*self._k0*self._x)*numpy.sqrt(2*numpy.pi)/self._dx
-        
-    def set_psi_x(self, psi_x):
-        self._psi_x = psi_x*numpy.exp(-1j*self._k0*self._x)*self._dx/numpy.sqrt(2*numpy.pi)
-        self._update_k()
-
-    def get_psi_k(self):
-        return self._psi_k*numpy.exp(-1j*self._x[0]*self._dk*numpy.arange(self._N))
-        
-    def set_psi_k(self, psi_k):
-        self._psi_k = psi_k*numpy.exp(1j*self._x[0]*self._dk*numpy.arange(self._N))
-        self._update_x()
-    
-    def set_dt(self, dt):
-        self._dt = dt
-        self._x_half_step = numpy.exp(-0.5j*self._V*self._dt)
-        self._x_step = self._x_half_step**2
-        self._k_step = numpy.exp(-0.5j*self._dt*self._k**2)
-    
-    def _update_x(self):
-        self._psi_x = fft.ifft(self._psi_k)
-    
-    def _update_k(self):
-        self._psi_k = fft.fft(self._psi_x)
-        
-    def step(self, steps=1):
-        self._psi_x *= self._x_half_step
-        for i in xrange(steps - 1):
-            self._update_k()
-            self._psi_k *= self._k_step
-            self._update_x()
-            self._psi_x *= self._x_step
-        self._update_k()
-        self._psi_k *= self._k_step
-        self._update_x()
-        self._psi_x *= self._x_half_step
-        self._update_k()
-        self._t += self._dt*steps
-
+        pass
     
    

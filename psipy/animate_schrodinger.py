@@ -1,3 +1,36 @@
+####
+#
+# Copyright (c) 2015, Jake Vanderplas, Luke Siemens
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright
+# notice, this list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright 
+# notice, this list of conditions and the following disclaimer in the 
+# documentation and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its 
+# contributors may be used to endorse or promote products derived from
+# this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A 
+# PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT 
+# HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY 
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+####
+
 """
 Solve and animate the Schrodinger equation
 
@@ -57,10 +90,10 @@ _T = unit_sys.get_T()
 _T.set_format("{:1.3e}")
 
 # specify time steps and duration
-dt = 0.01
+dt = 0.00001
 N_steps = 50
 t_max = 1000000
-ylim = (0, 0.13*0.13)
+ylim = (0, 1.0)
 frames = 100
 
 # specify constants
@@ -69,15 +102,16 @@ m = 1.0      # particle mass
 # specify range in x coordinate
 fac = 1
 N = 2 ** (11 + fac)
-dx = 0.1*2**(-fac)
+dx = 0.005*2**(-fac)
 x = dx * (np.arange(N) - 0.5 * N)
+print x
 
 # specify potential
 V_x = square_barrier(x, 1.5, 0)#.5)
-V_x[x < -98] = 1E0
-V_x[x > 98] = 1E0
+V_x[x < -5] = 1E3
+V_x[x > 5] = 1E3
 
-psi_x0 = gauss_x(x, 10, -50, 0.5)
+psi_x0 = gauss_x(x, 0.1, 0, 10.0)
 #psi_x0 = np.cos(np.pi*x/(2*98))
 #psi_x0 =psi_x0 + np.cos(3*np.pi*x/(2.0*98))
 
@@ -92,9 +126,9 @@ S = Schrodinger(x=x,
 fig = plt.figure()
 
 # plotting limits
-xlim = (-100, 100)
+xlim = (-8, 8)
 print S.p
-plim = (-5, 5)
+plim = (-100, 100)
 
 # top axes show the x-space data
 ax1 = fig.add_subplot(211, xlim=xlim, ylim=ylim)
