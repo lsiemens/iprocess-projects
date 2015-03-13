@@ -1,11 +1,26 @@
       module modules
-        use types, only: rp
+        use types, only: rp, sp, dp, qp
         implicit none
+        private
         public :: theta_dd_solver, initalize, zeros
         contains
 
+        subroutine solver(n, set_size, integrator, format, l, g, dt, theta, theta_d, theta_dd, data)
+          integer, intent(in) :: n, set_size, integrator, format
+          real(rp), intent(in) :: l, g, dt
+          real(rp), intent(in), allocatable :: theta(:), theta_d(:)
+          real(rp), intent(in), allocatable :: theta_dd(:)
+          real(rp), intent(out), allocatable :: data(:, :)
+
+          if (format.LT.0) then
+            print *, "format must be 1, 2, or 3"
+            stop "error"
+          end if
+          allocate(data(set_size * format, n))
+          
+        end subroutine solver
+
         subroutine theta_dd_solver(n, l, g, theta, theta_d, theta_dd)
-          implicit none
           integer :: i, j, solve_ok
           integer, allocatable :: pivot(:)
           real(rp) :: crossterms
@@ -33,15 +48,25 @@
               A(i, j) = bnij(n,i,j)*l*cos(theta(i)-theta(j))
             end do
           end do
-
-          print *, A
-          print *, b
-          call sgesv(n, 1, A, n, pivot, b, n, solve_ok)
+          
+          if (rp.EQ.sp) then
+            call sgesv(n, 1, A, n, pivot, b, n, solve_ok)
+          else if (rp.EQ.dp) then
+            call dgesv(n, 1, A, n, pivot, b, n, solve_ok)
+          else if (rp.EQ.qp) then
+            print *, "quad precision solver is not supported."
+            stop "error"
+          else
+            print *, "selected precision not recognized"
+            stop "error"
+          end if
 
           if (solve_ok.GT.0) then
             print *, "The matrix is singular, solution could not be found", solve_ok
+            stop "error"
           else if (solve_ok.LT.0) then
             print *, "The matrix contains illegal values", solve_ok
+            stop "error"
           end if
           theta_dd = b
         end subroutine theta_dd_solver
@@ -52,19 +77,24 @@
           b = (n+1-max(i, j))
         end function bnij
 
-        subroutine initalize(file_name, n, l, g, theta, theta_d, theta_dd)
-          use pyio, only: openpy, readpy_value, readpy_array, closepy
-          implicit none
+        subroutine initalize(file_name, n, sets, set_size, integrator, format, l, g, dt, theta, theta_d, theta_dd)
+          use pyio, only: openpy, readpy_int, readpy_value, readpy_array, closepy
         
           character (len=*), intent(in) :: file_name
           integer :: file_id
-          integer, intent(out) :: n
-          real(rp), intent(out) :: l, g
+          integer, intent(out) :: n, sets, set_size, integrator, format
+          real(rp), intent(out) :: l, g, dt
           real(rp), intent(out), allocatable :: theta(:), theta_d(:), theta_dd(:)
         
           call openpy(file_id, file_name)
+          call readpy_int(file_id, format)
+          call readpy_int(file_id, sets)
+          call readpy_int(file_id, set_size)
+          call readpy_int(file_id, integrator)
+          call readpy_int(file_id, n)
           call readpy_value(file_id, l)
           call readpy_value(file_id, g)
+          call readpy_value(file_id, dt)
           call readpy_array(file_id, n, theta)
           call readpy_array(file_id, n, theta_d)
           call readpy_array(file_id, n, theta_dd)
@@ -72,28 +102,39 @@
         end subroutine initalize
 
         subroutine zeros(file_name, n)
-          use pyio, only: openpy, writepy_value, writepy_array, closepy
-          implicit none
+          use pyio, only: openpy, writepy_int, writepy_value, writepy_array, closepy
         
           character (len=*), intent(in) :: file_name
-          integer :: file_id, i
+          integer :: file_id, i, sets, set_size, integrator, format
           integer, intent(in) :: n
-          real(rp) :: l, g
+          real(rp) :: l, g, dt
           real(rp), allocatable :: theta(:), theta_d(:), theta_dd(:)
           
-          l = 0.0
-          g = 0.0
+          sets = 0
+          set_size = 0
+          integrator = 0
+          format = 0
+          
+          l = 0.0_rp
+          g = 0.0_rp
+          dt = 0.0_rp
           allocate(theta(n))
           allocate(theta_d(n))
           allocate(theta_dd(n))
 
-          theta = (/ (0.0, i=1, n) /)
-          theta_d = (/ (0.0, i=1, n) /)
-          theta_dd = (/ (0.0, i=1, n) /)
+          theta = (/ (0.0_rp, i=1, n) /)
+          theta_d = (/ (0.0_rp, i=1, n) /)
+          theta_dd = (/ (0.0_rp, i=1, n) /)
 
           call openpy(file_id, file_name)
+          call writepy_int(file_id, format)
+          call writepy_int(file_id, sets)
+          call writepy_int(file_id, set_size)
+          call writepy_int(file_id, integrator)
+          call writepy_int(file_id, n)
           call writepy_value(file_id, l)
           call writepy_value(file_id, g)
+          call writepy_value(file_id, dt)
           call writepy_array(file_id, n, theta)
           call writepy_array(file_id, n, theta_d)
           call writepy_array(file_id, n, theta_dd)
