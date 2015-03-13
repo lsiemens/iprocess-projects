@@ -2,7 +2,7 @@
         use types, only: rp
         implicit none
         private :: newunit
-        public :: openpy, readpy_int, readpy_value, readpy_array
+        public :: openpy, appendpy, readpy_int, readpy_value, readpy_array
         public :: writepy_int, writepy_value, writepy_array, closepy
         contains
       
@@ -12,6 +12,15 @@
         
           call newunit(id)
           open(unit=id, file=file_name)
+          return
+        end
+
+        subroutine appendpy(id, file_name)
+          integer, intent(out) :: id
+          character (len=*), intent(in) :: file_name
+        
+          call newunit(id)
+          open(unit=id, file=file_name, position="append")
           return
         end
       
