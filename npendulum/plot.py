@@ -22,6 +22,12 @@ class npendulum:
         self.theta_dd = None
         self.x = None
         self.y = None
+        
+        self.fig = None
+        self.ax = None
+        self.lines = None
+        self.anim = None
+        self.sparse = 1
 
     def get_data(self, fname):
         file_in = pyio.pyio(fname)
@@ -66,21 +72,32 @@ class npendulum:
             self.y.append(y)
         self.x = numpy.array(self.x)
         self.y = numpy.array(self.y)
+        
+    def setup_animation(self):
+        self.fig, self.ax = pyplot.subplots()
+        self.lines = []
+        for i in xrange(self.n):
+            line, = self.ax.plot([],[])
+            self.lines.append(line)
+        self.ax.set_xlim([-self.n*self.l*1.1, self.n*self.l*1.1])
+        self.ax.set_ylim([-self.n*self.l*1.1, self.n*self.l*1.1])
+        
+    def animate(self, i):
+        for j in xrange(self.n):
+            self.lines[j].set_data([data.x[i*self.sparse][j], data.x[i*self.sparse][j+1]], [data.y[i*self.sparse][j], data.y[i*self.sparse][j+1]])
+        return tuple(self.lines)
 
+    def show_animation(self, animate, sparse = 1):
+        self.sparse = sparse
+        self.anim = animation.FuncAnimation(self.fig, animate, frames=int(data.sets*data.set_size/float(self.sparse)), interval=10)
+        pyplot.show()
+        
 data = npendulum()
 data.get_data("output.dat")
 
-fig, ax = pyplot.subplots()
-line_1, = ax.plot([], [])
-line_2, = ax.plot([], [])
-ax.set_xlim([-3, 3])
-ax.set_ylim([-3, 3])
-
+data.setup_animation()
 
 def animate(i):
-    line_1.set_data([0, data.x[i][1]],[0, data.y[i][1]])
-    line_2.set_data([data.x[i][1], data.x[i][2]],[data.y[i][1], data.y[i][2]])
-    return line_1, line_2
+    return data.animate(i)
 
-anim = animation.FuncAnimation(fig, animate, frames=data.sets*data.set_size, interval=10)
-pyplot.show()
+data.show_animation(animate, sparse = 2)
