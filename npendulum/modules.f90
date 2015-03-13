@@ -1,3 +1,4 @@
+
       module modules
         use types, only: rp, sp, dp, qp
         implicit none
@@ -5,8 +6,9 @@
         public :: solver, save_set, initalize, zeros
         contains
 
-        subroutine solver(n, set_size, integrator, format, l, g, dt, theta, theta_d, theta_dd, data)
+        subroutine solver(n, set_size, integrator, format, l, g, dt, theta, theta_d, theta_dd, data, hasnan)
           integer :: i
+          logical, intent(inout) :: hasnan
           integer, intent(in) :: n, set_size, integrator, format
           real(rp), intent(in) :: l, g, dt
           real(rp), intent(inout), allocatable :: theta(:), theta_d(:)
@@ -20,6 +22,13 @@
           allocate(data(n, set_size * format))
           
           do i=1, set_size
+            if (.not.(hasnan)) then
+              if (any(.not.(theta.eq.theta))) then
+                hasnan = .true.
+                print *, "Error: Nan detected in theta"
+              end if
+            end if
+                      
             if (format.eq.1) then
               data(:,i) = theta
             else if (format.eq.2) then
@@ -31,11 +40,13 @@
               data(:,format*i) = theta_dd
             end if
             
-            if (integrator.eq.1) then
-              call velocity_verlet_integrator(n, l, g, dt, theta, theta_d, theta_dd)
-            else
-              print *, "integrator must be 1"
-              stop "error"
+            if (.not.(hasnan)) then
+              if (integrator.eq.1) then
+                call velocity_verlet_integrator(n, l, g, dt, theta, theta_d, theta_dd)
+              else
+                print *, "integrator must be 1"
+                stop "error"
+              end if
             end if
           end do
         end subroutine solver
@@ -73,7 +84,7 @@
           do i = 1, n
             crossterms = 0.0_rp
             do j = 1, n
-              crossterms = crossterms + bnij(n, i, j)*l*theta_d(j)*sin(theta(i)-theta(j))
+              crossterms = crossterms + bnij(n, i, j)*l*theta_d(j)*theta_d(j)*sin(theta(i)-theta(j))
             end do
             b(i) = -g*(n+1-i)*sin(theta(i)) - crossterms
           end do

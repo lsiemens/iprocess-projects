@@ -79,8 +79,10 @@ class npendulum:
         for i in xrange(self.n):
             line, = self.ax.plot([],[])
             self.lines.append(line)
-        self.ax.set_xlim([-self.n*self.l*1.1, self.n*self.l*1.1])
-        self.ax.set_ylim([-self.n*self.l*1.1, self.n*self.l*1.1])
+#        self.ax.set_xlim([-self.n*self.l*1.1, self.n*self.l*1.1])
+#        self.ax.set_ylim([-self.n*self.l*1.1, self.n*self.l*1.1])
+        self.ax.set_xlim([-0.0004, 0.0004])
+        self.ax.set_ylim([-1.1, 0.1])
         
     def animate(self, i):
         for j in xrange(self.n):
@@ -89,7 +91,7 @@ class npendulum:
 
     def show_animation(self, animate, sparse = 1):
         self.sparse = sparse
-        self.anim = animation.FuncAnimation(self.fig, animate, frames=int(data.sets*data.set_size/float(self.sparse)), interval=10)
+        self.anim = animation.FuncAnimation(self.fig, animate, frames=int(data.sets*data.set_size/float(self.sparse)), interval=20)
         pyplot.show()
         
 data = npendulum()
@@ -100,4 +102,4 @@ data.setup_animation()
 def animate(i):
     return data.animate(i)
 
-data.show_animation(animate, sparse = 2)
+data.show_animation(animate, sparse = 50)
