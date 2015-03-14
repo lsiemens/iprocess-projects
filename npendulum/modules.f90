@@ -3,23 +3,28 @@
         use types, only: rp, sp, dp, qp
         implicit none
         private
-        public :: solver, save_set, initalize, zeros
+        public :: solver, save_set, initalize
         contains
 
-        subroutine solver(n, set_size, integrator, format, l, g, dt, theta, theta_d, theta_dd, data, hasnan)
+        subroutine solver(n, set_size, integrator, format, find_energy, l, g, dt, theta, theta_d, theta_dd, data, energy, hasnan)
           integer :: i
           logical, intent(inout) :: hasnan
+          logical, intent(in) :: find_energy
           integer, intent(in) :: n, set_size, integrator, format
           real(rp), intent(in) :: l, g, dt
           real(rp), intent(inout), allocatable :: theta(:), theta_d(:)
           real(rp), intent(inout), allocatable :: theta_dd(:)
-          real(rp), intent(out), allocatable :: data(:, :)
-
+          real(rp), intent(out), allocatable :: data(:, :), energy(:)
+          
           if ((format.lt.1).or.(format.gt.3)) then
             print *, "format must be 1, 2, or 3"
             stop "error"
           end if
+
           allocate(data(n, set_size * format))
+          if (find_energy) then
+            allocate(energy(set_size))
+          end if
           
           do i=1, set_size
             if (.not.(hasnan)) then
@@ -28,7 +33,7 @@
                 print *, "Error: Nan detected in theta"
               end if
             end if
-                      
+
             if (format.eq.1) then
               data(:,i) = theta
             else if (format.eq.2) then
@@ -40,6 +45,10 @@
               data(:,format*i) = theta_dd
             end if
             
+            if (find_energy) then
+              energy(i) = i*1.0_rp
+            end if
+
             if (.not.(hasnan)) then
               if (integrator.eq.1) then
                 call velocity_verlet_integrator(n, l, g, dt, theta, theta_d, theta_dd)
@@ -123,16 +132,16 @@
           b = (n+1-max(i, j))
         end function bnij
 
-        subroutine save_set(file_name, inital_set, n, sets, set_size, integrator, format, l, g, dt, data)
-          use pyio, only: openpy, appendpy, writepy_int, writepy_value, writepy_array, closepy
+        subroutine save_set(file_name, inital_set, n, sets, set_size, integrator, format, find_energy, l, g, dt, data, energy)
+          use pyio, only: openpy, appendpy, writepy_logic, writepy_int, writepy_value, writepy_array, closepy
           
-          logical, intent(in) :: inital_set
+          logical, intent(in) :: inital_set, find_energy
           character (len=*), intent(in) :: file_name
-          integer :: file_id, i
+          integer :: file_id, i, j
           integer, intent(in) :: n, sets, set_size, integrator, format
           real(rp), intent(in) :: l, g, dt
-          real(rp), intent(in), allocatable :: data(:, :)
-
+          real(rp), intent(in), allocatable :: data(:, :), energy(:)
+          
           if ((format.lt.1).or.(format.gt.3)) then
             print *, "format must be 1, 2, or 3"
             stop "error"
@@ -141,6 +150,7 @@
           if (inital_set) then
             call openpy(file_id, file_name)
             call writepy_int(file_id, format)
+            call writepy_logic(file_id, find_energy)
             call writepy_int(file_id, sets)
             call writepy_int(file_id, set_size)
             call writepy_int(file_id, integrator)
@@ -153,32 +163,30 @@
           end if
 
           do i=1, set_size
-            if (format.eq.1) then
-              call writepy_array(file_id, n, data(:, i))
-            else if (format.eq.2) then
-              call writepy_array(file_id, n, data(:, format*i-1))
-              call writepy_array(file_id, n, data(:, format*i))
-            else
-              call writepy_array(file_id, n, data(:, format*i-2))
-              call writepy_array(file_id, n, data(:, format*i-1))
-              call writepy_array(file_id, n, data(:, format*i))
+            do j=1-format, 0
+              call writepy_array(file_id, n, data(:, format*i+j))
+            end do
+            if (find_energy) then
+              call writepy_value(file_id, energy(i))
             end if
           end do
 
           call closepy(file_id)
         end subroutine save_set
 
-        subroutine initalize(file_name, n, sets, set_size, integrator, format, l, g, dt, theta, theta_d, theta_dd)
-          use pyio, only: openpy, readpy_int, readpy_value, readpy_array, closepy
+        subroutine initalize(file_name, n, sets, set_size, integrator, format, find_energy, l, g, dt, theta, theta_d, theta_dd)
+          use pyio, only: openpy, readpy_logic, readpy_int, readpy_value, readpy_array, closepy
         
           character (len=*), intent(in) :: file_name
           integer :: file_id
+          logical, intent(out) :: find_energy
           integer, intent(out) :: n, sets, set_size, integrator, format
           real(rp), intent(out) :: l, g, dt
           real(rp), intent(out), allocatable :: theta(:), theta_d(:), theta_dd(:)
         
           call openpy(file_id, file_name)
           call readpy_int(file_id, format)
+          call readpy_logic(file_id, find_energy)
           call readpy_int(file_id, sets)
           call readpy_int(file_id, set_size)
           call readpy_int(file_id, integrator)
@@ -190,45 +198,6 @@
           call readpy_array(file_id, n, theta_d)
           call readpy_array(file_id, n, theta_dd)
           call closepy(file_id)
+          
         end subroutine initalize
-
-        subroutine zeros(file_name, n)
-          use pyio, only: openpy, writepy_int, writepy_value, writepy_array, closepy
-        
-          character (len=*), intent(in) :: file_name
-          integer :: file_id, i, sets, set_size, integrator, format
-          integer, intent(in) :: n
-          real(rp) :: l, g, dt
-          real(rp), allocatable :: theta(:), theta_d(:), theta_dd(:)
-          
-          sets = 0
-          set_size = 0
-          integrator = 0
-          format = 0
-          
-          l = 0.0_rp
-          g = 0.0_rp
-          dt = 0.0_rp
-          allocate(theta(n))
-          allocate(theta_d(n))
-          allocate(theta_dd(n))
-
-          theta = (/ (0.0_rp, i=1, n) /)
-          theta_d = (/ (0.0_rp, i=1, n) /)
-          theta_dd = (/ (0.0_rp, i=1, n) /)
-
-          call openpy(file_id, file_name)
-          call writepy_int(file_id, format)
-          call writepy_int(file_id, sets)
-          call writepy_int(file_id, set_size)
-          call writepy_int(file_id, integrator)
-          call writepy_int(file_id, n)
-          call writepy_value(file_id, l)
-          call writepy_value(file_id, g)
-          call writepy_value(file_id, dt)
-          call writepy_array(file_id, n, theta)
-          call writepy_array(file_id, n, theta_d)
-          call writepy_array(file_id, n, theta_dd)
-          call closepy(file_id)
-        end subroutine zeros
       end module modules

@@ -2,7 +2,8 @@
         use types, only: rp
         implicit none
         private :: newunit
-        public :: openpy, appendpy, readpy_int, readpy_value, readpy_array
+        public :: openpy, appendpy, readpy_logic, readpy_int
+        public :: readpy_value, readpy_array, writepy_logic
         public :: writepy_int, writepy_value, writepy_array, closepy
         contains
       
@@ -24,6 +25,14 @@
           return
         end
       
+        subroutine readpy_logic(id, logic)
+          integer, intent(in) :: id
+          logical, intent(out) :: logic
+
+          read(id, *) logic
+          return
+        end
+
         subroutine readpy_int(id, int)
           integer, intent(in) :: id
           integer, intent(out) :: int
@@ -48,7 +57,15 @@
           read(id, *) array
           return
         end
-      
+
+        subroutine writepy_logic(id, logic)
+          integer, intent(in) :: id
+          logical, intent(in) :: logic
+        
+          write(id, *) logic
+          return
+        end
+
         subroutine writepy_int(id, int)
           integer, intent(in) :: id, int
         

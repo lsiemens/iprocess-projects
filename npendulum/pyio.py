@@ -6,6 +6,7 @@ class pyio:
     def __init__(self, fname):
         self.fname = fname
         self.format = 0
+        self.find_energy = False
         self.sets = 0
         self.set_size = 0
         self.integrator = 0
@@ -14,10 +15,12 @@ class pyio:
         self.g = 0
         self.dt = 0
         self.data = None
+        self.energy = None
 
-    def initalize(self, fname, format, sets, set_size, integrator, l, g, dt, theta, theta_d, theta_dd):
+    def initalize(self, fname, format, find_energy, sets, set_size, integrator, l, g, dt, theta, theta_d, theta_dd):
         self.fname = fname
         self.format = format
+        self.find_energy = find_energy
         self.sets = sets
         self.set_size = set_size
         self.integrator = integrator
@@ -32,6 +35,7 @@ class pyio:
         
         with open(self.fname, 'w') as file_out:
             self._write_int(file_out, self.format)
+            self._write_logic(file_out, self.find_energy)
             self._write_int(file_out, self.sets)
             self._write_int(file_out, self.set_size)
             self._write_int(file_out, self.integrator)
@@ -48,6 +52,8 @@ class pyio:
             line = file_in.readline()
             self.format = int(line)
             line = file_in.readline()
+            self.find_energy = ("T" in line)
+            line = file_in.readline()
             self.sets = int(line)
             line = file_in.readline()
             self.set_size = int(line)
@@ -62,12 +68,23 @@ class pyio:
             self.g = float(line)
             line = file_in.readline()
             self.dt = float(line)
+
+            if self.find_energy:
+                self.energy = []
             
             self.data = []
-            for line in file_in:
+            for i, line in enumerate(file_in):
                 line_data = [float(item) for item in line.split()]
-                self.data.append(line_data)
+                if self.find_energy:
+                    if (i % (self.format+1)) == self.format:
+                        self.energy.append(line_data[0])
+                    else:
+                        self.data.append(line_data)
+                else:
+                    self.data.append(line_data)
             self.data = numpy.array(self.data)
+            if self.find_energy:
+                self.energy = numpy.array(self.energy)
 
     def _write_value(self, file_out, value, new_line=True):
         if new_line:
@@ -78,6 +95,12 @@ class pyio:
     def _write_int(self, file_out, value):
         file_out.write(str(int(value)).rjust(12)+"\n")
 
+    def _write_logic(self, file_out, value):
+        if value:
+            file_out.write("  T\n")
+        else:
+            file_out.write("  F\n")
+        
     def _write_array(self, file_out, array):
         for i in xrange(self.n):
             if i < (self.n-1):
