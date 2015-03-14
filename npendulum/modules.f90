@@ -46,7 +46,7 @@
             end if
             
             if (find_energy) then
-              energy(i) = i*1.0_rp
+              energy(i) = calculate_energy(n, l, g, theta, theta_d)
             end if
 
             if (.not.(hasnan)) then
@@ -74,6 +74,28 @@
           call theta_dd_solver(n, l, g, theta, theta_d, theta_dd)
           theta_d = theta_d + 0.5_rp*(old_theta_dd+theta_dd)*dt
         end subroutine velocity_verlet_integrator
+
+        function calculate_energy(n, l, g, theta, theta_d) result(energy)
+          integer :: i, j
+          integer, intent(in) :: n
+          real(rp), intent(in) :: l, g
+          real(rp), intent(in), allocatable :: theta(:), theta_d(:)
+          real(rp) :: kenetic, potential, energy
+          
+          kenetic = 0.0_rp
+          do i=1, n
+            do j=1, n
+              kenetic = kenetic + 0.5*(n+1-i)*(l**2)*theta_d(i)*theta_d(j)*cos(theta(i)-theta(j))
+            end do
+          end do
+          
+          potential = 0.0_rp
+          do i=1, n
+            potential = potential -g*(n+1-i)*l*cos(theta(i))
+          end do
+          
+          energy = kenetic + potential
+        end function calculate_energy
 
         subroutine theta_dd_solver(n, l, g, theta, theta_d, theta_dd)
           integer :: i, j, solve_ok
