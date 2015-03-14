@@ -6,11 +6,13 @@
         public :: solver, save_set, initalize
         contains
 
-        subroutine solver(n, set_size, integrator, format, find_energy, l, g, dt, theta, theta_d, theta_dd, data, energy, hasnan)
-          integer :: i
+        subroutine solver(n, sparse, set_size, integrator, format, &
+                          find_energy, l, g, dt, theta, theta_d, &
+                          theta_dd, data, energy, hasnan)
+          integer :: i, j
           logical, intent(inout) :: hasnan
           logical, intent(in) :: find_energy
-          integer, intent(in) :: n, set_size, integrator, format
+          integer, intent(in) :: n, sparse, set_size, integrator, format
           real(rp), intent(in) :: l, g, dt
           real(rp), intent(inout), allocatable :: theta(:), theta_d(:)
           real(rp), intent(inout), allocatable :: theta_dd(:)
@@ -27,40 +29,58 @@
           end if
           
           do i=1, set_size
-            if (.not.(hasnan)) then
-              if (any(.not.(theta.eq.theta))) then
-                hasnan = .true.
-                print *, "Error: Nan detected in theta"
+            do j=1, sparse
+              if (.not.(hasnan)) then
+                if (any(.not.(theta.eq.theta))) then
+                  hasnan = .true.
+                  print *, "Error: Nan detected in theta"
+                end if
               end if
-            end if
 
-            if (format.eq.1) then
-              data(:,i) = theta
-            else if (format.eq.2) then
-              data(:,format*i-1) = theta
-              data(:,format*i) = theta_d
-            else
-              data(:,format*i-2) = theta
-              data(:,format*i-1) = theta_d
-              data(:,format*i) = theta_dd
-            end if
+              if (j.eq.sparse) then
+                if (format.eq.1) then
+                  data(:,i) = theta
+                else if (format.eq.2) then
+                  data(:,format*i-1) = theta
+                  data(:,format*i) = theta_d
+                else
+                  data(:,format*i-2) = theta
+                  data(:,format*i-1) = theta_d
+                  data(:,format*i) = theta_dd
+                end if
             
-            if (find_energy) then
-              energy(i) = calculate_energy(n, l, g, theta, theta_d)
-            end if
-
-            if (.not.(hasnan)) then
-              if (integrator.eq.1) then
-                call velocity_verlet_integrator(n, l, g, dt, theta, theta_d, theta_dd)
-              else
-                print *, "integrator must be 1"
-                stop "error"
+                if (find_energy) then
+                  energy(i) = calculate_energy(n, l, g, theta, theta_d)
+                end if
               end if
-            end if
+
+              if (.not.(hasnan)) then
+                if (integrator.eq.1) then
+                  call eulers_method(n, l, g, dt, theta, theta_d, theta_dd)
+                else if (integrator.eq.2) then
+                  call velocity_verlet_integrator(n, l, g, dt, theta, theta_d, theta_dd)
+                else
+                  print *, integrator, " is not a valid integrator"
+                  stop "error"
+                end if
+              end if
+            end do
           end do
         end subroutine solver
 
-        subroutine velocity_verlet_integrator(n, l, g, dt, theta, theta_d, theta_dd)
+        subroutine eulers_method(n, l, g, dt, theta, theta_d, theta_dd)
+          integer, intent(in) :: n
+          real(rp), intent(in) :: l, g, dt
+          real(rp), intent(inout), allocatable :: theta(:), theta_d(:)
+          real(rp), intent(inout), allocatable :: theta_dd(:)
+          
+          theta = theta + theta_d*dt
+          theta_d = theta_d + theta_dd*dt
+          call theta_dd_solver(n, l, g, theta, theta_d, theta_dd)
+        end subroutine eulers_method
+
+        subroutine velocity_verlet_integrator(n, l, g, dt, theta, &
+                                              theta_d, theta_dd)
           integer, intent(in) :: n
           real(rp), intent(in) :: l, g, dt
           real(rp), intent(inout), allocatable :: theta(:), theta_d(:)
@@ -115,7 +135,7 @@
           do i = 1, n
             crossterms = 0.0_rp
             do j = 1, n
-              crossterms = crossterms + bnij(n, i, j)*l*theta_d(j)*theta_d(j)*sin(theta(i)-theta(j))
+              crossterms = crossterms + bnij(n, i, j)*l*(theta_d(j)**2)*sin(theta(i)-theta(j))
             end do
             b(i) = -g*(n+1-i)*sin(theta(i)) - crossterms
           end do
@@ -154,13 +174,15 @@
           b = (n+1-max(i, j))
         end function bnij
 
-        subroutine save_set(file_name, inital_set, n, sets, set_size, integrator, format, find_energy, l, g, dt, data, energy)
+        subroutine save_set(file_name, inital_set, n, sparse, sets, &
+                            set_size, integrator, format, find_energy, &
+                            l, g, dt, data, energy)
           use pyio, only: openpy, appendpy, writepy_logic, writepy_int, writepy_value, writepy_array, closepy
           
           logical, intent(in) :: inital_set, find_energy
           character (len=*), intent(in) :: file_name
           integer :: file_id, i, j
-          integer, intent(in) :: n, sets, set_size, integrator, format
+          integer, intent(in) :: n, sparse, sets, set_size, integrator, format
           real(rp), intent(in) :: l, g, dt
           real(rp), intent(in), allocatable :: data(:, :), energy(:)
           
@@ -175,6 +197,7 @@
             call writepy_logic(file_id, find_energy)
             call writepy_int(file_id, sets)
             call writepy_int(file_id, set_size)
+            call writepy_int(file_id, sparse)
             call writepy_int(file_id, integrator)
             call writepy_int(file_id, n)
             call writepy_value(file_id, l)
@@ -196,13 +219,15 @@
           call closepy(file_id)
         end subroutine save_set
 
-        subroutine initalize(file_name, n, sets, set_size, integrator, format, find_energy, l, g, dt, theta, theta_d, theta_dd)
+        subroutine initalize(file_name, n, sparse, sets, set_size, &
+                             integrator, format, find_energy, l, g, &
+                             dt, theta, theta_d, theta_dd)
           use pyio, only: openpy, readpy_logic, readpy_int, readpy_value, readpy_array, closepy
         
           character (len=*), intent(in) :: file_name
           integer :: file_id
           logical, intent(out) :: find_energy
-          integer, intent(out) :: n, sets, set_size, integrator, format
+          integer, intent(out) :: n, sparse, sets, set_size, integrator, format
           real(rp), intent(out) :: l, g, dt
           real(rp), intent(out), allocatable :: theta(:), theta_d(:), theta_dd(:)
         
@@ -211,6 +236,7 @@
           call readpy_logic(file_id, find_energy)
           call readpy_int(file_id, sets)
           call readpy_int(file_id, set_size)
+          call readpy_int(file_id, sparse)
           call readpy_int(file_id, integrator)
           call readpy_int(file_id, n)
           call readpy_value(file_id, l)
