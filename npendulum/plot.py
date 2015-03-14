@@ -41,7 +41,7 @@ class npendulum:
         self.time_format = "{:1.4E}s"
         self.energy_format = "{:1.4E}j"
 
-    def get_data(self, fname):
+    def get_data(self, fname, sparse = 1):
         file_in = pyio.pyio(fname)
         file_in.load()
         self.format = file_in.format
@@ -49,6 +49,7 @@ class npendulum:
         self.sets = file_in.sets
         self.set_size = file_in.set_size
         self.n = file_in.n
+        self.sparse = sparse
         self.sparse_data = file_in.sparse
         self.l = file_in.l
         self.g = file_in.g
@@ -91,7 +92,7 @@ class npendulum:
         self.y = numpy.array(self.y)
         self.time = numpy.array([i*self.dt*self.sparse_data for i in xrange(self.sets*self.set_size)])
         
-    def setup_animation(self, window_min = 1):
+    def setup_animation(self, window_min = 1, energy_max = 100):
         self.fig = pyplot.figure()
         if self.find_energy:
             self.ax = self.fig.add_subplot(1, 2, 1)
@@ -141,11 +142,20 @@ class npendulum:
             e_min = numpy.nanmin(self.energy)
             t_max = numpy.nanmax(self.time)
             t_min = numpy.nanmin(self.time)
+            e_avg = (e_max+e_min)/2.0
+            e_width = (e_max-e_min)/2.0
+
+            if (e_width > energy_max):
+              e_width = energy_max
+              e_avg = 0
+              
+            e_width = e_width*1.1
+
             self.energy_sig = self.ax.text(0.05, 0.85, "Energy: ", transform=self.ax.transAxes)
             self.line_energy, = self.ax_energy.plot([],[])
             self.point_energy = self.ax_energy.scatter([],[])
             self.ax_energy.set_xlim([t_min, t_max])
-            self.ax_energy.set_ylim([e_min, e_max])
+            self.ax_energy.set_ylim([e_avg-e_width, e_avg+e_width])
 
     def animate(self, i):
         index = i*self.sparse
@@ -160,17 +170,47 @@ class npendulum:
         else:
             return tuple(self.lines)
 
-    def show_animation(self, animate, sparse = 1):
-        self.sparse = sparse
+    def show_animation(self, animate):
         self.anim = animation.FuncAnimation(self.fig, animate, frames=int(data.sets*data.set_size/float(self.sparse)), interval=20)
         pyplot.show()
 
+    def plot_energy(self, energy_max = 100):
+        self.fig = pyplot.figure()
+        if self.find_energy:
+            self.ax_energy = self.fig.add_subplot(1, 1, 1)
+
+            e_max = numpy.nanmax(self.energy)
+            e_min = numpy.nanmin(self.energy)
+            t_max = numpy.nanmax(self.time)
+            t_min = numpy.nanmin(self.time)
+            e_avg = (e_max+e_min)/2.0
+            e_width = (e_max-e_min)/2.0
+
+            if (e_width > energy_max):
+              e_width = energy_max
+              e_avg = 0
+              
+            e_width = e_width*1.1
+
+            self.line_energy, = self.ax_energy.plot(self.time[::self.sparse], self.energy[::self.sparse])
+            self.ax_energy.set_xlim([t_min, t_max])
+            self.ax_energy.set_ylim([e_avg-e_width, e_avg+e_width])
+            pyplot.show()
+        else:
+            print "No energy data!"
+
+
 data = npendulum()
 data.get_data("output.dat")
+
+data.plot_energy(1000)
+
+data.find_energy = False
 
 data.setup_animation()
 
 def animate(i):
     return data.animate(i)
 
-data.show_animation(animate, sparse = 1)
+data.show_animation(animate)
+

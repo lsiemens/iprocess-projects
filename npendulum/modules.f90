@@ -6,13 +6,13 @@
         public :: solver, save_set, initalize
         contains
 
-        subroutine solver(n, sparse, set_size, integrator, format, &
+        subroutine solver(n, set_size, sparse, integrator, format, &
                           find_energy, l, g, dt, theta, theta_d, &
                           theta_dd, data, energy, hasnan)
           integer :: i, j
           logical, intent(inout) :: hasnan
           logical, intent(in) :: find_energy
-          integer, intent(in) :: n, sparse, set_size, integrator, format
+          integer, intent(in) :: n, set_size, sparse, integrator, format
           real(rp), intent(in) :: l, g, dt
           real(rp), intent(inout), allocatable :: theta(:), theta_d(:)
           real(rp), intent(inout), allocatable :: theta_dd(:)
@@ -105,7 +105,7 @@
           kenetic = 0.0_rp
           do i=1, n
             do j=1, n
-              kenetic = kenetic + 0.5*(n+1-i)*(l**2)*theta_d(i)*theta_d(j)*cos(theta(i)-theta(j))
+              kenetic = kenetic + 0.5*bnij(n, i, j)*(l**2)*theta_d(i)*theta_d(j)*cos(theta(i)-theta(j))
             end do
           end do
           
@@ -174,15 +174,15 @@
           b = (n+1-max(i, j))
         end function bnij
 
-        subroutine save_set(file_name, inital_set, n, sparse, sets, &
-                            set_size, integrator, format, find_energy, &
+        subroutine save_set(file_name, inital_set, n, sets, set_size, &
+                            sparse, integrator, format, find_energy, &
                             l, g, dt, data, energy)
           use pyio, only: openpy, appendpy, writepy_logic, writepy_int, writepy_value, writepy_array, closepy
           
           logical, intent(in) :: inital_set, find_energy
           character (len=*), intent(in) :: file_name
           integer :: file_id, i, j
-          integer, intent(in) :: n, sparse, sets, set_size, integrator, format
+          integer, intent(in) :: n, sets, set_size, sparse, integrator, format
           real(rp), intent(in) :: l, g, dt
           real(rp), intent(in), allocatable :: data(:, :), energy(:)
           
@@ -190,7 +190,7 @@
             print *, "format must be 1, 2, or 3"
             stop "error"
           end if
-
+          
           if (inital_set) then
             call openpy(file_id, file_name)
             call writepy_int(file_id, format)
@@ -219,7 +219,7 @@
           call closepy(file_id)
         end subroutine save_set
 
-        subroutine initalize(file_name, n, sparse, sets, set_size, &
+        subroutine initalize(file_name, n, sets, set_size, sparse, &
                              integrator, format, find_energy, l, g, &
                              dt, theta, theta_d, theta_dd)
           use pyio, only: openpy, readpy_logic, readpy_int, readpy_value, readpy_array, closepy
@@ -227,7 +227,7 @@
           character (len=*), intent(in) :: file_name
           integer :: file_id
           logical, intent(out) :: find_energy
-          integer, intent(out) :: n, sparse, sets, set_size, integrator, format
+          integer, intent(out) :: n, sets, set_size, sparse, integrator, format
           real(rp), intent(out) :: l, g, dt
           real(rp), intent(out), allocatable :: theta(:), theta_d(:), theta_dd(:)
         
