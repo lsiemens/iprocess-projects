@@ -92,7 +92,7 @@ class npendulum:
         self.y = numpy.array(self.y)
         self.time = numpy.array([i*self.dt*self.sparse_data for i in xrange(self.sets*self.set_size)])
         
-    def setup_animation(self, window_min = 1, energy_max = 100):
+    def setup_animation(self, window_min = 2, energy_max = 100):
         self.fig = pyplot.figure()
         if self.find_energy:
             self.ax = self.fig.add_subplot(1, 2, 1)
@@ -170,9 +170,12 @@ class npendulum:
         else:
             return tuple(self.lines)
 
-    def show_animation(self, animate):
+    def show_animation(self, animate, fname=None):
         self.anim = animation.FuncAnimation(self.fig, animate, frames=int(data.sets*data.set_size/float(self.sparse)), interval=20)
-        pyplot.show()
+        if fname == None:
+          pyplot.show()
+        else:
+          self.anim.save(fname, fps=30)
 
     def plot_energy(self, energy_max = 100):
         self.fig = pyplot.figure()
@@ -212,5 +215,4 @@ data.setup_animation()
 def animate(i):
     return data.animate(i)
 
-data.show_animation(animate)
-
+data.show_animation(animate, fname="anim.mp4")
