@@ -38,6 +38,9 @@ class npendulum:
         self.sparse_data = 1
         self.sparse = 1
         
+        self.window_lim = None
+        self.energy_lim = None
+        
         self.time_format = "{:1.4E}s"
         self.energy_format = "{:1.4E}j"
 
@@ -91,8 +94,14 @@ class npendulum:
         self.x = numpy.array(self.x)
         self.y = numpy.array(self.y)
         self.time = numpy.array([i*self.dt*self.sparse_data for i in xrange(self.sets*self.set_size)])
+
+    def set_lim(self, lim, energy=False):
+       if not energy:
+           self.window_lim = lim
+       else:
+           self.energy_lim = lim
         
-    def setup_animation(self, window_min = 2, energy_max = 100):
+    def setup_animation(self, energy_max = 100):
         self.fig = pyplot.figure()
         if self.find_energy:
             self.ax = self.fig.add_subplot(1, 2, 1)
@@ -100,42 +109,20 @@ class npendulum:
         else:
             self.ax = self.fig.add_subplot(1, 1, 1)
         self.lines = []
-        x_max = numpy.nanmax(self.x)
-        x_min = numpy.nanmin(self.x)
-        y_max = numpy.nanmax(self.y)
-        y_min = numpy.nanmin(self.y)
 
-        x_avg = (x_max + x_min)/2.0
-        y_avg = (y_max + y_min)/2.0
-
-        x_width = (x_max - x_min)/2.0
-        y_width = (y_max - y_min)/2.0
-        
-        if x_width < window_min/2.0:
-            x_width = window_min/2.0
-
-        if y_width < window_min/2.0:
-            y_width = window_min/2.0
-        
-        if numpy.isnan(x_avg):
-            x_avg = 0.0
-            x_width = self.n*self.l
-
-        if numpy.isnan(y_avg):
-            y_avg = 0.0
-            y_width = self.n*self.l
-            
-        x_width = x_width*1.1
-        y_width = y_width*1.1
-        
         for i in xrange(self.n):
-            line, = self.ax.plot([],[])
+            line, = self.ax.plot([],[], c="k")
             self.lines.append(line)
 
+        if self.window_lim == None:
+            x_lim, y_lim = self._auto_window(self.x, self.y, 0.001, self.n*self.l, self.n*self.l)
+        else:
+            x_lim, y_lim = self.window_lim
+        
         self.time_sig = self.ax.text(0.05, 0.95, "time: ", transform=self.ax.transAxes)
         
-        self.ax.set_xlim([x_avg-x_width, x_avg+x_width]) 
-        self.ax.set_ylim([y_avg-y_width, y_avg+y_width])
+        self.ax.set_xlim(x_lim) 
+        self.ax.set_ylim(y_lim)
         
         if self.find_energy:
             e_max = numpy.nanmax(self.energy)
@@ -152,7 +139,7 @@ class npendulum:
             e_width = e_width*1.1
 
             self.energy_sig = self.ax.text(0.05, 0.85, "Energy: ", transform=self.ax.transAxes)
-            self.line_energy, = self.ax_energy.plot([],[])
+            self.line_energy, = self.ax_energy.plot([],[], c="k")
             self.point_energy = self.ax_energy.scatter([],[])
             self.ax_energy.set_xlim([t_min, t_max])
             self.ax_energy.set_ylim([e_avg-e_width, e_avg+e_width])
@@ -201,7 +188,37 @@ class npendulum:
             pyplot.show()
         else:
             print "No energy data!"
+    
+    def _auto_window(self, x, y, wmin, wmax_x, wmax_y):
+        x_max = numpy.nanmax(x)
+        x_min = numpy.nanmin(x)
+        y_max = numpy.nanmax(y)
+        y_min = numpy.nanmin(y)
 
+        x_avg = (x_max + x_min)/2.0
+        y_avg = (y_max + y_min)/2.0
+
+        x_width = (x_max - x_min)/2.0
+        y_width = (y_max - y_min)/2.0
+        
+        if x_width < wmin/2.0:
+            x_width = wmin/2.0
+
+        if y_width < wmin/2.0:
+            y_width = wmin/2.0
+        
+        if numpy.isnan(x_avg):
+            x_avg = 0.0
+            x_width = wmax_x
+
+        if numpy.isnan(y_avg):
+            y_avg = 0.0
+            y_width = wmax_y
+            
+        x_width = x_width*1.1
+        y_width = y_width*1.1
+        
+        return [x_avg-x_width, x_avg+x_width], [y_avg-y_width, y_avg+y_width]
 
 data = npendulum()
 data.get_data("output.dat")
@@ -209,6 +226,7 @@ data.get_data("output.dat")
 data.plot_energy(1000)
 
 data.find_energy = False
+data.set_lim(([-1, 1],[-1, 1]))
 
 data.setup_animation()
 

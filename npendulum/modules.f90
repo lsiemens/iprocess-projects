@@ -7,16 +7,17 @@
         contains
 
         subroutine solver(n, set_size, sparse, integrator, format, &
-                          find_energy, l, g, dt, theta, theta_d, &
-                          theta_dd, data, energy, hasnan)
+                          iolevel, find_energy, l, g, dt, theta, &
+                          theta_d, theta_dd, data, energy, hasnan)
           integer :: i, j
           logical, intent(inout) :: hasnan
           logical, intent(in) :: find_energy
-          integer, intent(in) :: n, set_size, sparse, integrator, format
+          integer, intent(in) :: n, set_size, sparse, integrator, format, iolevel
           real(rp), intent(in) :: l, g, dt
           real(rp), intent(inout), allocatable :: theta(:), theta_d(:)
           real(rp), intent(inout), allocatable :: theta_dd(:)
           real(rp), intent(out), allocatable :: data(:, :), energy(:)
+          real(rp), allocatable :: theta_old(:), tmp(:)
           
           if ((format.lt.1).or.(format.gt.3)) then
             print *, "format must be 1, 2, or 3"
@@ -28,7 +29,17 @@
             allocate(energy(set_size))
           end if
           
+          if (integrator.eq.3) then
+            allocate(theta_old(set_size))
+            allocate(tmp(set_size))
+            theta_old = theta
+          end if
+          
           do i=1, set_size
+            if (iolevel.gt.1) then
+              print *, "start subset: ", i
+            end if
+            
             do j=1, sparse
               if (.not.(hasnan)) then
                 if (any(.not.(theta.eq.theta))) then
@@ -59,6 +70,10 @@
                   call eulers_method(n, l, g, dt, theta, theta_d, theta_dd)
                 else if (integrator.eq.2) then
                   call velocity_verlet_integrator(n, l, g, dt, theta, theta_d, theta_dd)
+                else if (integrator.eq.3) then
+                  tmp = theta
+                  call second_order_taylor(n, l, g, dt, theta, theta_d, theta_dd, theta_old)
+                  theta_old = tmp
                 else
                   print *, integrator, " is not a valid integrator"
                   stop "error"
@@ -90,10 +105,24 @@
           allocate(old_theta_dd(n))
           old_theta_dd = theta_dd(:)
           
-          theta = theta + theta_d*dt+0.5_rp*theta_dd*dt*dt
+          theta = theta + theta_d*dt+0.5_rp*theta_dd*(dt**2)
           call theta_dd_solver(n, l, g, theta, theta_d, theta_dd)
           theta_d = theta_d + 0.5_rp*(old_theta_dd+theta_dd)*dt
         end subroutine velocity_verlet_integrator
+
+        subroutine second_order_taylor(n, l, g, dt, theta, theta_d, &
+                                       theta_dd, theta_old)
+          integer, intent(in) :: n
+          real(rp), intent(in) :: l, g, dt
+          real(rp), intent(inout), allocatable :: theta(:), theta_d(:)
+          real(rp), intent(inout), allocatable :: theta_dd(:)
+          real(rp), intent(in), allocatable :: theta_old(:)
+          
+          call theta_dd_solver(n, l, g, theta, theta_d, theta_dd)
+          
+          theta_d = theta_d + theta_dd*dt
+          theta = 2*theta - theta_old + theta_dd*(dt**2)
+        end subroutine second_order_taylor
 
         function calculate_energy(n, l, g, theta, theta_d) result(energy)
           integer :: i, j
@@ -175,14 +204,15 @@
         end function bnij
 
         subroutine save_set(file_name, inital_set, n, sets, set_size, &
-                            sparse, integrator, format, find_energy, &
-                            l, g, dt, data, energy)
+                            sparse, integrator, format, iolevel, &
+                            find_energy, l, g, dt, data, energy)
           use pyio, only: openpy, appendpy, writepy_logic, writepy_int, writepy_value, writepy_array, closepy
           
           logical, intent(in) :: inital_set, find_energy
           character (len=*), intent(in) :: file_name
           integer :: file_id, i, j
-          integer, intent(in) :: n, sets, set_size, sparse, integrator, format
+          integer, intent(in) :: n, sets, set_size, sparse, &
+                                 integrator, format, iolevel
           real(rp), intent(in) :: l, g, dt
           real(rp), intent(in), allocatable :: data(:, :), energy(:)
           
@@ -199,6 +229,7 @@
             call writepy_int(file_id, set_size)
             call writepy_int(file_id, sparse)
             call writepy_int(file_id, integrator)
+            call writepy_int(file_id, iolevel)
             call writepy_int(file_id, n)
             call writepy_value(file_id, l)
             call writepy_value(file_id, g)
@@ -220,14 +251,15 @@
         end subroutine save_set
 
         subroutine initalize(file_name, n, sets, set_size, sparse, &
-                             integrator, format, find_energy, l, g, &
-                             dt, theta, theta_d, theta_dd)
+                             integrator, format, iolevel, find_energy, &
+                             l, g, dt, theta, theta_d, theta_dd)
           use pyio, only: openpy, readpy_logic, readpy_int, readpy_value, readpy_array, closepy
         
           character (len=*), intent(in) :: file_name
           integer :: file_id
           logical, intent(out) :: find_energy
-          integer, intent(out) :: n, sets, set_size, sparse, integrator, format
+          integer, intent(out) :: n, sets, set_size, sparse, &
+                                  integrator, format, iolevel
           real(rp), intent(out) :: l, g, dt
           real(rp), intent(out), allocatable :: theta(:), theta_d(:), theta_dd(:)
         
@@ -238,6 +270,7 @@
           call readpy_int(file_id, set_size)
           call readpy_int(file_id, sparse)
           call readpy_int(file_id, integrator)
+          call readpy_int(file_id, iolevel)
           call readpy_int(file_id, n)
           call readpy_value(file_id, l)
           call readpy_value(file_id, g)

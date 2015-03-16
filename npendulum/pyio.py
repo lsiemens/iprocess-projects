@@ -10,6 +10,7 @@ class pyio:
         self.sets = 0
         self.set_size = 0
         self.integrator = 0
+        self.iolevel = 0
         self.n = 0
         self.sparse = 0
         self.l = 0
@@ -18,13 +19,14 @@ class pyio:
         self.data = None
         self.energy = None
 
-    def initalize(self, fname, format, find_energy, sets, set_size, integrator, sparse, l, g, dt, theta, theta_d, theta_dd):
+    def initalize(self, fname, format, find_energy, sets, set_size, integrator, iolevel, sparse, l, g, dt, theta, theta_d, theta_dd):
         self.fname = fname
         self.format = format
         self.find_energy = find_energy
         self.sets = sets
         self.set_size = set_size
         self.integrator = integrator
+        self.iolevel = iolevel
         self.sparse = sparse
         self.l = l
         self.g = g
@@ -42,6 +44,7 @@ class pyio:
             self._write_int(file_out, self.set_size)
             self._write_int(file_out, self.sparse)
             self._write_int(file_out, self.integrator)
+            self._write_int(file_out, self.iolevel)
             self._write_int(file_out, self.n)
             self._write_value(file_out, self.l)
             self._write_value(file_out, self.g)
@@ -64,6 +67,8 @@ class pyio:
             self.sparse = int(line)
             line = file_in.readline()
             self.integrator = int(line)
+            line = file_in.readline()
+            self.iolevel = int(line)
             line = file_in.readline()
             self.n = int(line)
 

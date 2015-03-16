@@ -8,3 +8,4 @@ run :
 	python setup_simulation.py
 	./pendulum.exe
 	python plot.py
+	gnome-open anim.mp4

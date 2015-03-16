@@ -4,23 +4,28 @@
         implicit none
 
         logical :: inital_set, hasnan, find_energy
-        integer :: n, sparse, sets, set_size, integrator, format, file_id, i
+        integer :: n, sparse, sets, set_size, integrator, format, &
+                   file_id, i, iolevel
         real(rp) :: l, g, dt
         real(rp), allocatable :: theta(:), theta_d(:), theta_dd(:), energy(:), data(:, :)
 
         call initalize("initalization.dat", n, sets, set_size, sparse, &
-                       integrator, format, find_energy, l, g, dt, &
+                       integrator, format, iolevel, find_energy, l, g, dt, &
                        theta, theta_d, theta_dd)
         inital_set = .true.
         hasnan = .false.
         
         do i = 1, sets
+          if (iolevel.gt.0) then
+            print *, "start set: ", i
+          end if
+          
           call solver(n, set_size, sparse, integrator, format, &
-                      find_energy, l, g, dt, theta, theta_d, theta_dd, &
-                      data, energy, hasnan)
+                      iolevel, find_energy, l, g, dt, theta, theta_d, &
+                      theta_dd, data, energy, hasnan)
           call save_set("output.dat", inital_set, n, sets, set_size, &
-                        sparse, integrator, format, find_energy, l, &
-                        g, dt, data, energy)
+                        sparse, integrator, format, iolevel, &
+                        find_energy, l, g, dt, data, energy)
 
           if (inital_set) then
             inital_set = .false.
