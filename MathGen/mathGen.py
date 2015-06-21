@@ -85,6 +85,7 @@ class equation:
         self.functions = functions
         self.variables = variables
         self.value_complexity = value_complexity
+        self.res = 0.1
         
         self._max_depth = 20
         
@@ -105,7 +106,7 @@ class equation:
             var_val = -1.0
         else:
             var_val = operator_prob + function_prob + variable_prob
-        return self._set_random_element(oper_val, func_val, var_val, random_mean, random_deviation, 0)
+        self.equation = self._set_random_element(oper_val, func_val, var_val, random_mean, random_deviation, 0)
         
     def _set_random_element(self, oper_val, func_val, var_val, random_mean, random_deviation, depth):
         element = None
@@ -134,12 +135,29 @@ class equation:
                 element = value(random.gauss(random_mean, random_deviation), self.value_complexity)
         return element
     
-    def find_error(self):
-        error = numpy.sum(numpy.power(self.equation.evaluate() - self.target, 2))
+    def find_error(self, mode="AbsError", **kwargs):#mode: AbsError, RelError, SoftError
+        if mode == "AbsError":
+            error = numpy.sum((self.equation.evaluate(**kwargs) - self.target)**2)
+        if mode == "RelError":
+            error = numpy.sum(((self.equation.evaluate(**kwargs) - self.target)/self.target)**2)
+        if mode == "SoftError":
+            error = numpy.sum((self.equation.evaluate(**kwargs) - self.target)**2/(self.target**2 + self.res**2))
         return error
 
-test = equation({"+":(1, False), "-":(1, False), "*":(2, False)}, {"numpy.cos":(3, False, 1), "numpy.sin":(3, False, 1), "numpy.power":(3, True, 2)}, {"2":1, "numpy.e":1, "numpy.pi":1}, 1)
-for i in range(3):
-    equ = test.random_equation(0.2, 0.2, 0.1, 10.0, 5)
-    print(str(equ), equ.complexity())
-    print(eval(str(equ)))
+test = equation({"+":(1, False), "-":(1, False), "*":(2, False)}, {"numpy.cos":(3, False, 1), "numpy.sin":(3, False, 1)}, {"X":1}, 1)
+X = numpy.linspace(0, 20, 10000)
+T = numpy.sin(X)+0.3*numpy.cos(2.12*X)
+test.target = T
+
+min_error = None
+equation = None
+while True:
+    test.random_equation(0.25, 0.25, 0.25, 1.0, 10.0)
+    equ = test.equation
+    error = test.find_error("SoftError", X=X)
+    if (min_error == None) or (min_error > error):
+        min_error = error
+        print error, str(equ)
+        equation = equ
+        if error < 1:
+            break
