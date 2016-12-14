@@ -112,29 +112,20 @@ class markov_chain:
             #process all ngrams
             for i in range(len(self._text) - (self.order)):
                 ngram = self._text[i:i + self.order + 1]
-                if ngram in self._transitions:
-                    self._transitions[ngram] += 1
-                else:
-                    self._transitions[ngram] = 1
+                self._add_ngram(ngram)
         else:
             #process characters in the first ngram
             for tmp_order in range(self.order):
                 ngram = self._text[:tmp_order + 1]
                 while len(ngram) > 0:
-                    if ngram in self._transitions:
-                        self._transitions[ngram] += 1
-                    else:
-                        self._transitions[ngram] = 1
+                    self._add_ngram(ngram)
                     ngram = ngram[1:]
             
             #process the rest of the text
             for i in range(len(self._text) - (self.order)):
                 ngram = self._text[i:i + self.order + 1]
                 while len(ngram) > 0:
-                    if ngram in self._transitions:
-                        self._transitions[ngram] += 1
-                    else:
-                        self._transitions[ngram] = 1
+                    self._add_ngram(ngram)
                     ngram = ngram[1:]
         
     def generate_string(self, length, seed=None):
@@ -212,10 +203,9 @@ dir = "prepared_text//"
 ext = ".txt"
 names = ["pg1268"]
 text = [dir + name + ext for name in names]
-order = 20
-lower_order = True
+order = 5
+lower_order = False
 
 text_gen = markov_chain(order, lower_order, valid_chars="abcdefghijklmnopqrstuvwxyz,. \n?\'\"")
 text_gen.calculate_transitions(text)
-#print(text_gen._transitions)
-text_gen.generate_string(2000, "")
+text_gen.generate_string(100)
