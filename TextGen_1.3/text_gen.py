@@ -41,6 +41,7 @@ This is a tool to generate random text using a markov chain.
 """
 
 import numpy
+import pickle
 import os
 
 class markov_chain:
@@ -99,14 +100,22 @@ class markov_chain:
             if os.path.isfile(text):
                 with open(text, "r") as txt_file:
                     text = txt_file.read()
+            else:
+                raise ValueError("No file found \"" + fname + "\"")
         else:
             tmp_text = ""
             for fname in text:
-                with open(fname, "r") as txt_file:
-                    tmp_text += txt_file.read() + " "
+                if os.path.isfile(fname):
+                    with open(fname, "r") as txt_file:
+                        tmp_text += txt_file.read() + "\n"
+                else:
+                    raise ValueError("No file found \"" + fname + "\"")
             text = tmp_text
             
         self._text = "".join(char for char in text.lower() if char in self.valid_chars)
+        
+        if len(self._text) < self.order:
+            raise ValueError("insufficient text to generate ngrams.")
         
         if not self.lower_order:
             #process all ngrams
@@ -142,7 +151,10 @@ class markov_chain:
         
         """
         if seed is None:
-            seed = self._text[:self.order]
+            seed = self._text[:self.order + 1]
+            
+        print("seed (" + str(len(seed)) + "): \"" + seed + "\"")
+        print("order: " + str(self.order))
         if not self.lower_order:
             if len(seed) < self.order:
                 raise ValueError("the length of the seed must be equal to the order")
@@ -155,6 +167,32 @@ class markov_chain:
             text += self._get_character(context)
         print(text)
         
+    def save(self, fname):
+        """ 
+        Save markov chain to disk
+        
+        Parameters
+        ----------
+        fname : String
+            Name of file.
+        """
+        
+        with open(fname, "wb") as fout:
+            pickle.dump(self, fout)
+        
+    def load(self, fname):
+        """ 
+        Load markov chain from disk.
+        
+        Parameters
+        ----------
+        fname : String
+            Name of file.
+        """
+        
+        with open(fname, "rb") as fin:
+            self._assignment(pickle.load(fin))
+
     def _add_ngram(self, ngram):
         """ 
         Add ngram to transitions
@@ -164,7 +202,6 @@ class markov_chain:
         ngram : string
             ngram to add to the markov chain transitions
         """
-        
         if ngram in self._transitions:
             self._transitions[ngram] += 1
         else:
@@ -198,14 +235,38 @@ class markov_chain:
                     break
         return character
 
-dir = "prepared_text//"
-#dir = "full_text//"
-ext = ".txt"
-names = ["pg1268"]
-text = [dir + name + ext for name in names]
-order = 5
+    def _assignment(self, other):
+        """ 
+        Implement the code "self = other"
+        
+        Parameters
+        ----------
+        other : markov_chain
+            Instance of markov_chain to be copied into self.
+        """
+
+        self.order = other.order
+        self.lower_order = other.lower_order
+        self.valid_chars = other.valid_chars
+        self._transitions = other._transitions
+        self._text = other._text
+
+
+dir = "./prepared_text/"
+#text = [dir + "pg1268.txt"]
+text = [dir + file for file in os.listdir(dir) if file.startswith("pg")]
+order = 10
 lower_order = False
 
 text_gen = markov_chain(order, lower_order, valid_chars="abcdefghijklmnopqrstuvwxyz,. \n?\'\"")
 text_gen.calculate_transitions(text)
-text_gen.generate_string(100)
+text_gen.save("sav.dat")
+text_gen = None
+
+print("saved data")
+
+gen = markov_chain()
+gen.load("sav.dat")
+print("loaded data")
+gen.generate_string(10000)
+
