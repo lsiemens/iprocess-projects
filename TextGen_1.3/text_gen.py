@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 ####
 #
 # Copyright (c) 2016, Luke Siemens
@@ -153,8 +151,6 @@ class markov_chain:
         if seed is None:
             seed = self._text[:self.order + 1]
             
-        print("seed (" + str(len(seed)) + "): \"" + seed + "\"")
-        print("order: " + str(self.order))
         if not self.lower_order:
             if len(seed) < self.order:
                 raise ValueError("the length of the seed must be equal to the order")
@@ -250,23 +246,3 @@ class markov_chain:
         self.valid_chars = other.valid_chars
         self._transitions = other._transitions
         self._text = other._text
-
-
-dir = "./prepared_text/"
-#text = [dir + "pg1268.txt"]
-text = [dir + file for file in os.listdir(dir) if file.startswith("pg")]
-order = 10
-lower_order = False
-
-text_gen = markov_chain(order, lower_order, valid_chars="abcdefghijklmnopqrstuvwxyz,. \n?\'\"")
-text_gen.calculate_transitions(text)
-text_gen.save("sav.dat")
-text_gen = None
-
-print("saved data")
-
-gen = markov_chain()
-gen.load("sav.dat")
-print("loaded data")
-gen.generate_string(10000)
-
