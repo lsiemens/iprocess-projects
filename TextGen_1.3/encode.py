@@ -110,7 +110,6 @@ class huffman_compression_static:
     def __init__(self, markov_chain):
         self.markov_chain = markov_chain
         self.codes = None
-        print("created compressor")
     
     def compress_value(self, context, symbol, byte_array):
         """ 
@@ -131,13 +130,11 @@ class huffman_compression_static:
             bits = bits + byte_array.read(1)
 
             for value, code in self.codes:
-                print(bits, code)
                 if bits == code:
                     return value
         raise EOFError("End of data stream.")
 
     def _initalize_compression(self):
-        print("initalized compressor")
         trees = []
         leafs = []
         for character in self.markov_chain.valid_chars:
@@ -174,17 +171,15 @@ class markov_encoding(text_gen.markov_chain):
         super().__init__(order, lower_order, valid_chars)
         self.compression = huffman_compression_static(self)
 
-    def compress_value(self, context, symbol, byte_array):
-    def decompress_value(self, context, byte_array):
-    
     def encode_text(self, text):
         self._check_compatibility()
         seed = text[:self.order]
         text = text[len(seed):]
-        encoding = []
+        encoding = rawbytes()
         context = seed
         while (len(text) > 0):
-            encoding.append(self._encode_char(context, text[0]))
+            symbol = self._encode_char(context, text[0])
+            self.compression.compress_value(context, symbol, encoding)
             if self.order > 0:
                 context = context[1:] + text[0]
             else:
@@ -197,12 +192,12 @@ class markov_encoding(text_gen.markov_chain):
         text = seed
         context = seed
         while (len(encoding) > 0):
-            text = text + self._decode_char(context, encoding[0])
+            symbol = self.compression.decompress_value(context, encoding)
+            text = text + self._decode_char(context, symbol)
             if self.order > 0:
                 context = context[1:] + text[-1]
             else:
                 context = ""
-            encoding = encoding[1:]
         return text
         
     def load(self, fname):
@@ -279,7 +274,10 @@ text = "hello dad,\nthis is a test message. what are you up to today? i am doing
 data = markov_encoding()
 data.load("sav.dat")
 seed, encoding = data.encode_text(text)
-print(encoding)
+print(encoding.rbytes)
+print(len(encoding))
+encoding.rbytes[0] += 1
 msg = data.decode_text(seed, encoding)
 print(msg)
+print(len(msg)*8)
 
