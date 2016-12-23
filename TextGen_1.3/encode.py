@@ -11,9 +11,9 @@ class rawbytes:
             self.start = 0
             self.end = 0
         else:
-            self.rbytes = bytearray(byte_array.rbytes)
-            self.start = byte_array.start    
-            self.end = byte_array.end
+            self.rbytes = byte_array
+            self.start = 0
+            self.end = 8*len(byte_array)
             
     def __len__(self):
         return self.end - self.start
@@ -199,7 +199,11 @@ class markov_encoding(text_gen.markov_chain):
                     print(100 - len(encoding)//(encoding_len//100))
             except ZeroDivisionError:
                 pass
-            symbol = self.compression.decompress_value(context, encoding)
+            
+            try:
+                symbol = self.compression.decompress_value(context, encoding)
+            except EOFError:
+                break
             text = text + self._decode_char(context, symbol)
             if self.order > 0:
                 if len(context) >= self.order:
