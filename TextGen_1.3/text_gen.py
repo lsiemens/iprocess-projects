@@ -31,7 +31,7 @@
 #
 ####
 
-"""
+""" 
 TextGen 1.3
 
 This is a tool to generate random text using a markov chain.
