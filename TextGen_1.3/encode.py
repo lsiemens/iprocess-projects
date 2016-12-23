@@ -152,9 +152,6 @@ class huffman_compression_static:
         leafs = sorted(leafs, key=lambda obj: obj.weight, reverse=True)
         self.codes = [[i, leaf.code] for i, leaf in enumerate(leafs)]
 
-        for code in self.codes:
-            print("symbol: " + str(code[0]) + " code: " + ''.join(["1" if i else "0" for i in code[1]]))
-
 class huffman_compression_dynamic:
     """ 
     Simular to 'huffman_compression_statis' except code is customized for each context in the markov chain
@@ -171,29 +168,43 @@ class markov_encoding(text_gen.markov_chain):
 
     def encode_text(self, text):
         self._check_compatibility()
-        seed = text[:self.order]
-        text = text[len(seed):]
         encoding = rawbytes()
-        context = seed
+        context = ""
+        text_len = len(text)
         while (len(text) > 0):
+            try:
+                if len(text)%(text_len//100) == 0:
+                    print(100 - len(text)//(text_len//100))
+            except ZeroDivisionError:
+                pass
             symbol = self._encode_char(context, text[0])
             self.compression.compress_value(context, symbol, encoding)
             if self.order > 0:
-                context = context[1:] + text[0]
+                if len(context) >= self.order:
+                    context = context[1:]
+                context = context + text[0]
             else:
                 context = ""
             text = text[1:]
-        return seed, encoding
+        return encoding
 
-    def decode_text(self, seed, encoding):
+    def decode_text(self, encoding):
         self._check_compatibility()
-        text = seed
-        context = seed
+        text = ""
+        context = ""
+        encoding_len = len(encoding)
         while (len(encoding) > 0):
+            try:
+                if len(encoding)%(encoding_len//100) == 0:
+                    print(100 - len(encoding)//(encoding_len//100))
+            except ZeroDivisionError:
+                pass
             symbol = self.compression.decompress_value(context, encoding)
             text = text + self._decode_char(context, symbol)
             if self.order > 0:
-                context = context[1:] + text[-1]
+                if len(context) >= self.order:
+                    context = context[1:]
+                context = context + text[-1]
             else:
                 context = ""
         return text
