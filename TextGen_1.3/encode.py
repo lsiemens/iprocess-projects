@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import os
 import text_gen
 
@@ -267,17 +265,3 @@ class markov_encoding(text_gen.markov_chain):
     def _check_compatibility(self):
         if not self.lower_order:
             raise ValueError("Transitions not compattible with encoding, recompute with \'lower_order\' enabled")
-
-
-text = "hello dad,\nthis is a test message. what are you up to today? i am doing well,\n\nluke"
-
-data = markov_encoding()
-data.load("sav.dat")
-seed, encoding = data.encode_text(text)
-print(encoding.rbytes)
-print(len(encoding))
-encoding.rbytes[0] += 1
-msg = data.decode_text(seed, encoding)
-print(msg)
-print(len(msg)*8)
-

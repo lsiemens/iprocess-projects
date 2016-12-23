@@ -1,0 +1,3 @@
+*.pyc
+prepared_text/*.txt
+*.data
