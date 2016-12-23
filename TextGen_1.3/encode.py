@@ -156,7 +156,79 @@ class huffman_compression_dynamic:
     """ 
     Simular to 'huffman_compression_statis' except code is customized for each context in the markov chain
     """
-    pass
+    def __init__(self, markov_chain):
+        self.markov_chain = markov_chain
+        self.codes = None
+    
+    def compress_value(self, context, symbol, byte_array):
+        """ 
+        Write symbol to byte_array compressed using huffman code.
+        """
+        self._generate_code(context)
+
+        for value, code in self.codes:
+            if symbol == value:
+                byte_array.write(code)
+                break
+        return byte_array
+
+    def decompress_value(self, context, byte_array):
+        """ 
+        Read symbol from byte_array using huffman code.
+        """
+        self._generate_code(context)
+
+        bits = []
+        while len(byte_array) > 0:
+            bits = bits + byte_array.read(1)
+
+            for value, code in self.codes:
+                if bits == code:
+                    return value
+        raise EOFError("End of data stream.")
+
+    def _initalize_compression(self):
+        pass
+    
+    def _generate_code(self, context):
+        trees = []
+        leafs = []
+        processed_chars = []
+        scale = 1
+        while len(context) >= 0:
+            group_total = 0
+            for character in self.markov_chain.valid_chars:
+                if character not in processed_chars:
+                    if context + character in self.markov_chain._transitions:
+                        total += self.markov_chain._transitions[context + character]
+            
+            if total != 0:
+                for character in self.markov_chain.valid_chars:
+                    if character not in processed_chars:
+                        if context + character in self.markov_chain._transitions:
+                            trees.append(tree(character, self.markov_chain._transitions[context + character]/float(scale*group_total)))
+                            processed_chars.append(character)
+                scale = scale*total
+
+            if len(processed_chars) == len(self.markov_chain.valid_chars):
+                break
+
+            if (len(context) == 0) and (len(processed_chars) != len(self.markov_chain.valid_chars)):
+                raise ValueError("Character frequency data not found.")
+            
+            context = context[1:]
+
+        leafs = trees
+        
+        while len(trees) > 1:
+            trees = sorted(trees, key=lambda obj: obj.weight, reverse=True)
+            newtree = tree(None, trees[-2].weight + trees[-1].weight, trees[-2:])
+            trees = trees[:-2] + [newtree]
+        
+        huffman_tree = trees[0]
+        huffman_tree.generate_codes()
+        leafs = sorted(leafs, key=lambda obj: obj.weight, reverse=True)
+        self.codes = [[i, leaf.code] for i, leaf in enumerate(leafs)]
 
 class markov_encoding(text_gen.markov_chain):
     """ 
@@ -164,7 +236,8 @@ class markov_encoding(text_gen.markov_chain):
     """
     def __init__(self, order=0, lower_order=False, valid_chars=None):
         super().__init__(order, lower_order, valid_chars)
-        self.compression = huffman_compression_static(self)
+        #self.compression = huffman_compression_static(self)
+        self.compression = huffman_compression_dynamic(self)
 
     def encode_text(self, text):
         self._check_compatibility()
