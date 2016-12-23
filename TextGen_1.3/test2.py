@@ -3,7 +3,7 @@
 import encode
 
 text = ""
-with open("./full_text/pg1257.txt") as fin:
+with open("./pg1257.txt") as fin:
     text = fin.read().lower()
 
 data = encode.markov_encoding()
@@ -23,5 +23,5 @@ with open("compressed.data", "rb") as fin:
     decoding = encode.rawbytes(bytearray(fin.read()))
 msg = data.decode_text(decoding)
 
-with open("raw_out.txt", "w") as fout:
+with open("raw_out2.txt", "w") as fout:
     fout.write(msg)

@@ -2,6 +2,8 @@
 
 import os
 
+encode_ascii = True
+
 source_dir = "./"
 target_dir = "../prepared_text/"
 
@@ -33,7 +35,11 @@ for file in files:
     if os.path.isfile(target_dir + file):
         os.remove(target_dir + file)    
     
-    with open(target_dir + file, "w") as fout:
-        fout.write(text)
+    if encode_ascii:
+       with open(target_dir + file, "wb") as fout:
+            fout.write(text.encode("ascii", "ignore"))
+    else:
+       with open(target_dir + file, "w") as fout:
+            fout.write(text)
     
     print(file)
