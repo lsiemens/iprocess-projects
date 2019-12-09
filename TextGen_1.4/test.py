@@ -39,17 +39,53 @@ for char in set(text_huffman) - set(markov.Markov.symbols):
 
 #gen_5 = markov.Markov(text_markov[:100000], order=5)
 gen_5 = markov.Markov(text_markov, order=5)
-sequence = gen_5.getSequence(text_huffman[:10000])
-#sequence = gen_5.getSequence(text_huffman)
+#sequence = gen_5.getSequence(text_huffman[:10000])
+sequence = gen_5.getSequence(text_huffman)
 
 print(list(set(sequence)))
 huf = huffman.Huffman(sequence, list(range(len(gen_5.symbols) + 1)))
 
-
-sequence2 = gen_5.getSequence(text_huffman[10000:20000])
-print("encode")
+text = str(input("Enter text (all lower case):"))
+sequence2 = gen_5.getSequence(text)
+print("markov encode:", sequence2)
 data = huf.encode(sequence2)
-#print(data)
-print("decode")
+print("huffman encode:", data)
+sequence3 = huf.decode(data)
+print("huffman decode:", sequence3)
+text2 = gen_5.getText(sequence3)
+print("markov decode:", text2)
 #print(huf.decode(data))
-print(sequence2 == huf.decode(data))
+print(text == text2)
+print(sequence2 == sequence3)
+
+print("data ", len(data), "bits.")
+print("text ", len(text)*numpy.log(len(gen_5.symbols))/numpy.log(2), "bits.")
+print("compression ", len(data) / (len(text)*numpy.log(len(gen_5.symbols))/numpy.log(2)), "percent")
+
+#huf2 = huffman.Huffman(list(text_huffman[:10000]), list(gen_5.symbols))
+huf2 = huffman.Huffman(list(text_huffman), list(gen_5.symbols))
+print(huf2._encode)
+
+data2 = huf2.encode(text)
+print(data2)
+text3 = "".join(huf2.decode(data2))
+print(text3)
+print(text == text3)
+
+print("data ", len(data2), "bits.")
+print("text ", len(text)*numpy.log(len(gen_5.symbols))/numpy.log(2), "bits.")
+print("compression ", len(data2) / (len(text)*numpy.log(len(gen_5.symbols))/numpy.log(2)), "percent")
+
+huf3 = huffman.Huffman(list(text), list(gen_5.symbols))
+print(huf3._encode)
+
+data3 = huf3.encode(text)
+print(data3)
+text4 = "".join(huf3.decode(data3))
+print(text4)
+print(text == text4)
+
+print("data ", len(data3), "bits.")
+print("text ", len(text)*numpy.log(len(gen_5.symbols))/numpy.log(2), "bits.")
+print("compression ", len(data3) / (len(text)*numpy.log(len(gen_5.symbols))/numpy.log(2)), "percent")
+

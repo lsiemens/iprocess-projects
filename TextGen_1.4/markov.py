@@ -78,9 +78,12 @@ class Markov:
         sequence = []
         ngram = ""
         for i in range(len(text)):
-            if i % (len(text)//100) == 0:
-                sys.stdout.write("\r%d%%" % int(100*i/len(text)))
-                sys.stdout.flush()
+            try:
+                if i % (len(text)//100) == 0:
+                    sys.stdout.write("\r%d%%" % int(100*i/len(text)))
+                    sys.stdout.flush()
+            except ZeroDivisionError:
+                pass
 
             valid_ngram = False
             while not valid_ngram:
