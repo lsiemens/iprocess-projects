@@ -1,4 +1,5 @@
 import markov
+import huffman
 import glob
 import numpy
 from matplotlib import pyplot
@@ -36,7 +37,10 @@ for (old, new) in replace:
 for char in set(text_huffman) - set(markov.Markov.symbols):
     text_huffman = text_huffman.replace(char, "")
 
-gen_5 = markov.Markov(text_markov, order=4)
+gen_5 = markov.Markov(text_markov[:100000], order=5)
 sequence = gen_5.getSequence(text_huffman[:10000])
 
-print(sequence)
+print(list(set(sequence)))
+huf = huffman.Huffman(sequence, list(set(sequence)))
+
+

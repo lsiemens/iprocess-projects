@@ -2,7 +2,8 @@ import sys
 import numpy
 
 class Markov:
-    symbols = "abcdefghijklmnopqrstuvwxyz0123456789 .,?\'\n"
+#    symbols = "abcdefghijklmnopqrstuvwxyz0123456789 .,?\'\n"
+    symbols = "abcdefghijklmnopqrstuvwxyz0123456789 .,?\n"
 
     def __init__(self, training_text, order=5):
         self.order = order
