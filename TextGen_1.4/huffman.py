@@ -10,21 +10,49 @@ class Node:
         return self
 
     def getHuffmanSymbol(self):
-        pass
+        if self.parent is None:
+            return ""
+
+        if self.isLarge:
+            symbol = "1"
+        else:
+            symbol = "0"
+
+        return self.parent.getHuffmanSymbol() + symbol
 
 class Huffman:
     def __init__(self, training_data, markov_symbols):
         self._training_data = training_data
         self._markov_symbols = markov_symbols
         self._huffman_symbols = None
-        self.encode = {} #self._encode[markov_symbol] == huffman_symbol
-        self.decode = {} #self._encode[huffman_symbol] == markov_symbol
-        self._tree = None
+        self._encode = {} #self._encode[markov_symbol] == huffman_symbol
+        self._decode = {} #self._decode[huffman_symbol] == markov_symbol
 
         self.train()
 
+    def encode(self, sequence):
+        data = ""
+        for symbol in sequence:
+            data += self._encode[symbol]
+        return data
+
+    def decode(self, data):
+        sequence = []
+        symbol = ""
+        while len(data) > 0:
+            symbol += data[0]
+            data = data[1:]
+            if symbol in self._decode:
+                sequence.append(self._decode[symbol])
+                symbol = ""
+
+            assert len(symbol) <= max(map(len, self._huffman_symbols))
+
+        print("Remainder:", symbol)
+        return sequence
+
     def train(self):
-        frequency_data = {}
+        frequency_data = {symbol:0 for symbol in self._markov_symbols}
         for key in self._training_data:
             if key in frequency_data:
                 frequency_data[key] += 1
@@ -33,7 +61,6 @@ class Huffman:
         frequency_data = list(frequency_data.items())
         frequency_data.sort(key=lambda item: item[0])
         frequency_data.sort(key=lambda item: item[1], reverse=True)
-        print(frequency_data)
         nodes = [Node(weight).setMarkov(symbol) for (symbol, weight) in frequency_data]
         temp_nodes = list(nodes)
 
@@ -41,7 +68,12 @@ class Huffman:
             temp_nodes = self._combine_nodes(temp_nodes)
 
         for node in nodes:
-            print(node.weight, node.markov_symbol, node.getHuffmanSymbol())
+            huffman_symbol = node.getHuffmanSymbol()
+            self._encode[node.markov_symbol] = huffman_symbol
+            self._decode[huffman_symbol] = node.markov_symbol
+            print(node.weight, node.parent, node.markov_symbol, huffman_symbol) #--------------------------------
+
+        self._huffman_symbols = [self._encode[symbol] for symbol in self._markov_symbols]
 
     def _combine_nodes(self, nodes):
         node_small = nodes[-1]
