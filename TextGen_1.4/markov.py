@@ -9,6 +9,7 @@ class Markov:
         self._training_text = training_text
         self._data = {}
         self._ordered_symbols = self.symbols
+        self._break_symbol = len(self._ordered_symbols) #give it an index 1 greater than the least common character
 
         self.train()
 
@@ -44,50 +45,63 @@ class Markov:
 
     def getText(self, sequence, seed=""):
         text = seed
-        ngram = seed[-self.order:]
+        if self.order > 0:
+            ngram = seed[-self.order:]
+        else:
+            ngram = ""
         for index in sequence:
-#            valid_ngram = False
-#            while not valid_ngram:
+            if index == self._break_symbol:
+                ngram = ngram[1:]
+                continue
+            valid_ngram = False
+            while not valid_ngram:
                 options = self.getOptions(ngram)
                 (char, value) = options[index]
-#                if value == 0:
-#                    if len(ngram) > 0:
-#                        print(repr(ngram), repr(char), index)
-#                        ngram = ngram[1:]
-#                        print("Problem T")
-#                        continue
-#                    else:
-#                        raise ValueError("no options.")
+                if value == 0:
+                    if len(ngram) > 0:
+                        ngram = ngram[1:]
+                        continue
+                    else:
+                        raise ValueError("no options.")
 
                 text += char
                 ngram += char
-                ngram = ngram[-self.order:]
-#                valid_ngram = True
+                if self.order > 0:
+                    ngram = ngram[-self.order:]
+                else:
+                    ngram = ""
+                valid_ngram = True
         return text
 
     def getSequence(self, text):
         sequence = []
         ngram = ""
         for i in range(len(text)):
-#            valid_ngram = False
-#            while not valid_ngram:
+            if i % (len(text)//100) == 0:
+                sys.stdout.write("\r%d%%" % int(100*i/len(text)))
+                sys.stdout.flush()
+
+            valid_ngram = False
+            while not valid_ngram:
                 char = text[i]
                 options = self.getOptions(ngram)
                 index = list(map(lambda item: item[0], options)).index(char)
                 (_, value) = options[index]
-#                if value == 0:
-#                    if len(ngram) > 0:
-#                        print(repr(ngram), repr(char))
-#                        ngram = ngram[1:]
-#                        print("Problem S")
-#                        continue
-#                    else:
-#                        raise ValueError("no options.")
+                if value == 0:
+                    if len(ngram) > 0:
+                        sequence.append(self._break_symbol)
+                        ngram = ngram[1:]
+                        continue
+                    else:
+                        raise ValueError("no options.")
 
                 sequence.append(index)
                 ngram += char
-                ngram = ngram[-self.order:]
-#                valid_ngram = True
+                if self.order > 0:
+                    ngram = ngram[-self.order:]
+                else:
+                    ngram = ""
+                valid_ngram = True
         return sequence
 
     def getOptions(self, ngram=""):
