@@ -48,7 +48,7 @@ class Huffman:
 
             assert len(symbol) <= max(map(len, self._huffman_symbols))
 
-        print("Remainder:", symbol)
+#        print("Remainder:", symbol)
         return sequence
 
     def train(self):
@@ -71,7 +71,7 @@ class Huffman:
             huffman_symbol = node.getHuffmanSymbol()
             self._encode[node.markov_symbol] = huffman_symbol
             self._decode[huffman_symbol] = node.markov_symbol
-#            print(node.weight, node.parent, node.markov_symbol, huffman_symbol) #--------------------------------
+            print(node.weight, node.parent, node.markov_symbol, huffman_symbol) #--------------------------------
 
         self._huffman_symbols = [self._encode[symbol] for symbol in self._markov_symbols]
 

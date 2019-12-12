@@ -2,8 +2,7 @@ import sys
 import numpy
 
 class Markov:
-#    symbols = "abcdefghijklmnopqrstuvwxyz0123456789 .,?\'\n"
-    symbols = "abcdefghijklmnopqrstuvwxyz0123456789 .,?\n"
+    symbols = "abcdefghijklmnopqrstuvwxyz0123456789 .,?\"\n"
 
     def __init__(self, training_text, order=5):
         self.order = order
@@ -15,7 +14,7 @@ class Markov:
         self.train()
 
     def train(self):
-        self._data = {}
+        self._data = {symbol:1 for symbol in self._ordered_symbols}
         for i in range(len(self._training_text) - self.order):
 
             if i % ((len(self._training_text) - self.order)//100) == 0:
