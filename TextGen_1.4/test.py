@@ -1,6 +1,7 @@
 import markov
 import huffman
 import utils
+import marsta
 
 import itertools
 import numpy
@@ -83,6 +84,24 @@ print(_txt)
 assert (text2 in text_test)
 assert (",".join(map(str,sequence2)) in ",".join(map(str,sequence)))
 assert (data2 in "".join(data))
+
+## ---------------------CLEAN
+print("test data historical dependence with MarSta")
+tester = marsta.MarSta(sequence, order=1)
+tester_d = tester.allIndependent()
+for t in tester_d:
+    print(t)
+
+tester = marsta.MarSta(data, order=1)
+tester_d = tester.allIndependent()
+for t in tester_d:
+    print(t)
+
+tester = marsta.MarSta(data_second, order=1)
+tester_d = tester.allIndependent()
+for t in tester_d:
+    print(t)
+## ---------------------CLEAN
 
 print("data_second ", len(data_second), "bits.")
 print("data ", len(data2), "bits.")
