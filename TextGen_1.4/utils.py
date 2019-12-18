@@ -18,6 +18,25 @@ def open_files(path, valid_symbols):
 
 def clean_text(text, valid_symbols):
     text = text.lower()
+
+    text = text.split("\n")
+    start = None
+    end = None
+
+    for i, line in enumerate(text):
+        if line.startswith("***"):
+            start = i
+            break
+
+    text = text[start + 1:]
+
+    for i, line in enumerate(text):
+        if line.startswith("***"):
+            end = i
+            break
+
+    text = "\n".join(text[:end - 3])
+
     for (old, new) in _replacements:
         text = text.replace(old, new)
 

@@ -72,15 +72,17 @@ class MarSta:
                     self.data[key] = 1
         print(", Training complete.\n")
 
+    # TODO add allUniform check
+
     def allIndependent(self):
         data = []
         for i in range(1, self.order + 1):
             for ngram in itertools.product(self.symbols, repeat=i):
                 if ngram in self.data:
-                    try:
+#                    try:
                         data.append((ngram, self.isIndependent(ngram)))
-                    except ValueError:
-                        print("inssuficient data for ngram ", ngram)
+#                    except ValueError:
+#                        print("inssuficient data for ngram ", ngram)
         return data
 
     def isUniform(self, ngram=()):
@@ -105,12 +107,20 @@ class MarSta:
 #        if any([value == 0 for value in values]):
 #            raise ValueError("Error: one or more symbols occured zero times.")
 
+        values = numpy.array(values)
+        mask = numpy.array(values)
+        mask[mask<5] = 0
+        mask[mask>=5] = 1
+        mask = mask.astype(numpy.bool)
+        values = values[mask]
         num = sum(values)
-        model = num*numpy.array(distribution)
+        model = numpy.array(distribution)
+        model = model[mask]
+        model = num*model/sum(model)
         print(values)
         print(model)
-        if any([value < 5 for value in model]):
-            raise ValueError("Error: insufficent samples")
+#        if any([value < 5 for value in model]):
+#            raise ValueError("Error: insufficent samples")
         return scipy.stats.chisquare(f_obs=values, f_exp=model)
 
     def getOptions(self, ngram=()):

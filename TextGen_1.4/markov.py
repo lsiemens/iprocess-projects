@@ -18,7 +18,7 @@ class Markov:
         for i in range(len(self._training_text) - self.order):
 
             if i % ((len(self._training_text) - self.order)//100) == 0:
-                sys.stdout.write("\r%d%%" % int(100*i/(len(self._training_text) - self.order)))
+                sys.stdout.write("\rMarkov training %d%%" % int(100*i/(len(self._training_text) - self.order)))
                 sys.stdout.flush()
 
             substring = self._training_text[i:i + self.order + 1]
@@ -28,7 +28,6 @@ class Markov:
                     self._data[key] += 1
                 else:
                     self._data[key] = 1
-        print(", Training complete.\n")
 
         options = self.getOptions()
         self._ordered_symbols = "".join([key for (key, value) in options])
@@ -79,7 +78,7 @@ class Markov:
         for i in range(len(text)):
             try:
                 if i % (len(text)//100) == 0:
-                    sys.stdout.write("\r%d%%" % int(100*i/len(text)))
+                    sys.stdout.write("\rMarkov get sequence %d%%" % int(100*i/len(text)))
                     sys.stdout.flush()
             except ZeroDivisionError:
                 pass

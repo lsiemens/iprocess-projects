@@ -9,16 +9,16 @@ import random
 from matplotlib import pyplot
 
 isfast = False
-#isfast = True
+isfast = True
 
 path = "./Books/*.txt"
 texts = utils.open_files(path, markov.Markov.symbols)
 files = list(texts.keys())
 random.shuffle(files)
 
-text_markov = "\n".join([texts[file] for file in files[:-3]])
-text_huffman = "\n".join([texts[file] for file in [files[-3]]])
-text_huffman_second = "\n".join([texts[file] for file in [files[-2]]])
+text_markov = "\n".join([texts[file] for file in files[:-5]])
+text_huffman = "\n".join([texts[file] for file in files[-5:-3]])
+text_huffman_second = "\n".join([texts[file] for file in files[-3:-1]])
 text_test = "\n".join([texts[file] for file in [files[-1]]])
 
 if isfast:
@@ -87,17 +87,20 @@ assert (data2 in "".join(data))
 
 ## ---------------------CLEAN
 print("test data historical dependence with MarSta")
+print("sequence")
 tester = marsta.MarSta(sequence, order=1)
 tester_d = tester.allIndependent()
 for t in tester_d:
     print(t)
 
-tester = marsta.MarSta(data, order=1)
+print("data")
+tester = marsta.MarSta(data, order=3)
 tester_d = tester.allIndependent()
 for t in tester_d:
     print(t)
 
-tester = marsta.MarSta(data_second, order=1)
+print("data_second")
+tester = marsta.MarSta(data_second, order=3)
 tester_d = tester.allIndependent()
 for t in tester_d:
     print(t)
