@@ -1,0 +1,3 @@
+Change markov.py so rather than encoding the rank order choice, encode using the relative frequency (eg assign each choise some range in
+[0,1] spanning the range and encode by choosing a float in the range corisponding to the encoded character) this should lead to more natural
+word structure.
