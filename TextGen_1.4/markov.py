@@ -31,7 +31,6 @@ class Markov:
                     self._data[key] = 1
         sys.stdout.write("\n")
         sys.stdout.flush()
-        print(num_found)
 
 #    def getCanonicalText(self, length, seed=""):
 #        sequence = [0]*(length - len(seed))
