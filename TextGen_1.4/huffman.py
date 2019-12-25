@@ -21,9 +21,11 @@ class Node:
         return self.parent.getHuffmanSymbol() + symbol
 
 class Huffman:
-    def __init__(self, training_data, markov_symbols, dataIsWeights=False):
+    def __init__(self, training_data, markov_symbols, dataIsWeights=False, modifySymbols=False, depth=8):
         self._training_data = training_data
         self._dataIsWeights = dataIsWeights
+        self._modifySymbols = modifySymbols
+        self._symbol_depth = depth
         self._markov_symbols = markov_symbols
         self._huffman_symbols = None
         self._encode = {} #self._encode[markov_symbol] == huffman_symbol
@@ -62,6 +64,20 @@ class Huffman:
                     frequency_data[key] = 1
         else:
             frequency_data = self._training_data
+
+        if self._modifySymbols:
+            new_data = []
+            for (symbol, value) in data:
+                sub_data = []
+                for i in range(1, self._symbol_depth):
+                    if value >= 0.5**i:
+                        sub_data.append((symbol + "_" + str(i), 0.5**i))
+                        value -= 0.5**i
+
+                if value > 0:
+                    sub_data.append((symbol + "_" + str(i + 1), value))
+
+                new_data += sub_data
 
         frequency_data = list(frequency_data.items())
         frequency_data.sort(key=lambda item: item[0])
