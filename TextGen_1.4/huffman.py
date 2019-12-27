@@ -28,7 +28,7 @@ class Huffman:
         self._symbol_depth = depth
         self._markov_symbols = markov_symbols
         self._huffman_symbols = None
-        self._encode = {} #self._encode[markov_symbol] == huffman_symbol
+        self._encode = {} #self._encode[markov_symbol] == [(huffman_symbol, frequency), ...]
         self._decode = {} #self._decode[huffman_symbol] == markov_symbol
 
         self.train()
@@ -36,7 +36,8 @@ class Huffman:
     def encode(self, sequence):
         data = ""
         for symbol in sequence:
-            data += self._encode[symbol]
+            if len(self._encode[symbol]) == 1:
+                data += self._encode[symbol][0][0]
         return data
 
     def decode(self, data):
@@ -90,10 +91,11 @@ class Huffman:
 
         for node in nodes:
             huffman_symbol = node.getHuffmanSymbol()
-            self._encode[node.markov_symbol] = huffman_symbol
+            self._encode[node.markov_symbol] = [(huffman_symbol, 1.0)] # add encoding for multiple symbols
             self._decode[huffman_symbol] = node.markov_symbol
             print(node.weight, repr(node.markov_symbol), huffman_symbol, 0.5**len(huffman_symbol)) #--------------------------------
 
+        # get list of all _huffman_symbols
         self._huffman_symbols = [self._encode[symbol] for symbol in self._markov_symbols]
 
     def _combine_nodes(self, nodes):
