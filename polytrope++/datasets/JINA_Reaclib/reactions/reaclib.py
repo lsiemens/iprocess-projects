@@ -35,11 +35,18 @@ def read_file(fname):
 
     # read header
     chapter, file = int(file[0]), file[1:]
+    num_input, num_output = chapters[chapter]
+    num = num_input + num_output
+
+    # remove extra header lines in REACLIB 2 files
+    file = [line for line in file if len(line.strip()) > 1]
 
     # read sets
     a = []
     for i in range(len(file)//3):
         head = file[i*3].split()
+        reaction = {"reactant":head[:num_input],
+                    "product":head[num_input:num]}
         Q_value = float(head[-1])
 
         width = 13
@@ -63,14 +70,7 @@ def read_file(fname):
             Reaction rate
         """
         try:
-            return numpy.sum(numpy.exp(a[0]
-                                     + a[1]/T9
-                                     + a[2]/T9**(1/3)
-                                     + a[3]*T9**(1/3)
-                                     + a[4]*T9
-                                     + a[5]*T9**(5/3)
-                                     + a[6]*numpy.log(T9)), axis=0)
-        except ValueError:
+            len(T9)
             return numpy.sum(numpy.exp(
                           a[0, :, numpy.newaxis]
                         + a[1, :, numpy.newaxis]/T9
@@ -79,13 +79,12 @@ def read_file(fname):
                         + a[4, :, numpy.newaxis]*T9
                         + a[5, :, numpy.newaxis]*T9**(5/3)
                         + a[6, :, numpy.newaxis]*numpy.log(T9)), axis=0)
-    return reaction_rate
-
-nrr = read_file("n15-pg-o16-li10")
-from matplotlib import pyplot
-
-print(nrr(0.5))
-
-T9 = numpy.linspace(1e-3, 10)
-pyplot.plot(T9, nrr(T9))
-pyplot.show()
+        except TypeError:
+            return numpy.sum(numpy.exp(a[0]
+                                     + a[1]/T9
+                                     + a[2]/T9**(1/3)
+                                     + a[3]*T9**(1/3)
+                                     + a[4]*T9
+                                     + a[5]*T9**(5/3)
+                                     + a[6]*numpy.log(T9)), axis=0)
+    return reaction, reaction_rate
