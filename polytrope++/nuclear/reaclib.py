@@ -2,7 +2,6 @@
 """
 
 import numpy
-from numpy import sum, log, exp
 
 # Reaclib chapters in the format {chapter:(# reactant, # products)}
 chapters = { 1:(1, 1),
@@ -88,3 +87,4 @@ def read_file(fname):
                                      + a[5]*T9**(5/3)
                                      + a[6]*numpy.log(T9)), axis=0)
     return reaction, reaction_rate
+
