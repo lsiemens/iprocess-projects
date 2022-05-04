@@ -1,4 +1,19 @@
 """Code to read JINA Reaclib reaction rates
+
+Read nuclear reaction rates from JINA reaclib 1/2 files. The reaction
+rates are stored as sets of parameters for the seven parameter function.
+The resulting rate is used in a set of differential equation for the
+evolution of the reactant aboundance. Details can be found at [1]_
+
+Note the units of the reaction rate depend on the type of reaction. For
+one particle reactions the units are [s^-1]. For two particle reactions
+the units are [cm^3 s^-1 mol^-1] ...
+
+Refrences
+---------
+[1] Cyburt, Richard H., et al. "The JINA REACLIB database: its recent
+    updates and impact on type-I X-ray bursts." The Astrophysical
+    Journal Supplement Series 189.1 (2010): 240.
 """
 
 
@@ -56,10 +71,22 @@ def read_file(fname):
     for i in range(len(file)//3):
         head = file[i*3].split()
 
-        AZs = [isotopes.str_to_AZ(str) for str in head[:num]]
-        sort_key = lambda AZ:AZ[0]
-        reactants = sorted(AZs[:num_input], key=sort_key, reverse=True)
-        products = sorted(AZs[num_input:], key=sort_key, reverse=True)
+        sort_key = lambda AZN:AZN[0]
+
+        # get names in input/output, remove duplicates, count duplicates
+        # and append number to front, convert to AZN and sort by mass number
+        reactant_names = [str for str in head[:num_input]]
+        reactants = list(set(reactant_names))
+        reactants = [str(reactant_names.count(name)) + name for name in reactants]
+        reactants = [isotopes.str_to_AZN(name) for name in reactants]
+        reactants = sorted(reactants, key=sort_key, reverse=True)
+
+        product_names = [str for str in head[num_input:num]]
+        products = list(set(product_names))
+        products = [str(product_names.count(name)) + name for name in products]
+        products = [isotopes.str_to_AZN(name) for name in products]
+        products = sorted(products, key=sort_key, reverse=True)
+
         reaction = {"reactant":reactants,
                     "product":products}
 
