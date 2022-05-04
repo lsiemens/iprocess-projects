@@ -26,7 +26,7 @@ def str_to_AZ(str):
         The tuple (A, Z) where A is the mass number and Z is the atomic
         number.
     """
-    str = str.tolower()
+    str = str.lower()
     if str in particles:
         return particles[str]
 
@@ -39,7 +39,7 @@ def str_to_AZ(str):
                 break
     return (A, Z)
 
-def AZ_to_str(AZ):
+def AZ_to_str(AZ, capitalize=True):
     """(A, Z) to isotope string
 
     (A, Z) to string of the form element abreviation, mass number or
@@ -57,14 +57,28 @@ def AZ_to_str(AZ):
         Isotope or particle string, ex "fe56" or "p"
     """
     for key, value in particles.items():
-        print(value, AZ, AZ == value)
         if AZ == value:
             return key
 
     A, Z = AZ
-    return elements[Z - 1] + str(A)
+    if capitalize:
+        return elements[Z - 1].capitalize() + str(A)
+    else:
+        return elements[Z - 1] + str(A)
 
-#def reaction(reaction):
-#    string = f"{reaction['reactant'][0]}({reaction['reactant'][1:]},{reaction['product'][1:]}){reaction['product'][0]}"
-#    print(string)
-    #{"reactant":(), "product"}
+def reaction_name(reaction):
+    """Get reaction name
+
+    Parameters
+    ----------
+    reaction : dict
+        dict of reactants and products
+
+    Returns
+    -------
+    string
+        Reaction equation
+    """
+    reactants = [AZ_to_str(reactant) for reactant in reaction["reactant"]]
+    products = [AZ_to_str(product) for product in reaction["product"]]
+    return f"{reactants[0]}({' '.join(reactants[1:])},{' '.join(products[1:])}){products[0]}"

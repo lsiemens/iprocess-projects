@@ -1,7 +1,9 @@
 """Code to read JINA Reaclib reaction rates
 """
 
+
 import numpy
+import isotopes
 
 # Reaclib chapters in the format {chapter:(# reactant, # products)}
 chapters = { 1:(1, 1),
@@ -26,6 +28,15 @@ def read_file(fname):
     ----------
     fname : string
         path to the file
+
+    Returns
+    -------
+    reaction : dict
+        Dictonary of reactants and products
+    Q_value : float
+        The energy released by the reaction in Mev
+    reaction_rate : function
+        The reaction rate function
     """
     with open(fname, "r") as fin:
         file = fin.read()
@@ -44,8 +55,14 @@ def read_file(fname):
     a = []
     for i in range(len(file)//3):
         head = file[i*3].split()
-        reaction = {"reactant":head[:num_input],
-                    "product":head[num_input:num]}
+
+        AZs = [isotopes.str_to_AZ(str) for str in head[:num]]
+        sort_key = lambda AZ:AZ[0]
+        reactants = sorted(AZs[:num_input], key=sort_key, reverse=True)
+        products = sorted(AZs[num_input:], key=sort_key, reverse=True)
+        reaction = {"reactant":reactants,
+                    "product":products}
+
         Q_value = float(head[-1])
 
         width = 13
@@ -86,5 +103,4 @@ def read_file(fname):
                                      + a[4]*T9
                                      + a[5]*T9**(5/3)
                                      + a[6]*numpy.log(T9)), axis=0)
-    return reaction, reaction_rate
-
+    return reaction, Q_value, reaction_rate
