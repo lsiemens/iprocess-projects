@@ -122,7 +122,7 @@ def reaction_to_str(reaction):
     main_product = AZN_to_str(main_product)
     products = " ".join([AZN_to_str(product) for product in products])
 
-    return main_reactant + "(" + reactants + ", " + products + ")" + main_product
+    return main_reactant + "(" + reactants + "," + products + ")" + main_product
 
 def str_to_reaction(str):
     """Get reaction from name

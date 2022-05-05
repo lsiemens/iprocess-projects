@@ -17,7 +17,9 @@ Refrences
 """
 
 
+import os
 import numpy
+
 import isotopes
 
 # Reaclib chapters in the format {chapter:(# reactant, # products)}
@@ -32,6 +34,8 @@ chapters = { 1:(1, 1),
              9:(3, 2),
             10:(4, 2),
             11:(1, 4)}
+
+fname_reactions = "reaction_list"
 
 def read_file(fname):
     """Read files using REACLIB 1/2 format
@@ -131,3 +135,58 @@ def read_file(fname):
                                      + a[5]*T9**(5/3)
                                      + a[6]*numpy.log(T9)), axis=0)
     return reaction, Q_value, reaction_rate
+
+def make_reaction_list(dir="./reactions/"):
+    """Make reaction list
+
+    helper file used to match reaction names with file names
+
+    Parameters
+    ----------
+    dir : str, optional
+        Directory to scan for nuclear reaction rates. The default is
+        "./reactions/"
+    """
+
+    text = ["# reaction file"]
+    for file in os.listdir(dir):
+        path = os.path.join(dir, file)
+        if os.path.isfile(path):
+            if file.endswith(".md"):
+                continue
+            if file == fname_reactions:
+                continue
+
+            try:
+                reaction, _, _ = read_file(path)
+                reaction = isotopes.reaction_to_str(reaction)
+                text.append(f"{reaction} {file}")
+            except:
+                print(f"Failed to read \"{path}\", skipping")
+                continue
+    with open(os.path.join(dir, fname_reactions), "w") as fout:
+        fout.write("\n".join(text))
+
+def read_reaction_list(dir="./reactions/"):
+    """Read reaction list
+
+    Parameters
+    ----------
+    dir : str, optional
+        Directory with reaction_list file. The default is "./reactions/"
+
+    Returns
+    -------
+    dict
+        Dictonary where the keys are reaction names and the value is the
+        path to a reaction rate file for said reaction.
+    """
+    with open(os.path.join(dir, fname_reactions), "r") as fin:
+        text = fin.read().split("\n")[1:]
+
+    reactions_path = {}
+    for line in text:
+        reaction, file = line.rsplit(" ", 1)
+        reactions_path[reaction] = os.path.join(dir, file)
+
+    return reactions_path

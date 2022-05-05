@@ -2,10 +2,11 @@
 """
 
 import isotopes
+import reaclib
 from matplotlib import pyplot
 
-def load_network(fname):
-    """Load network file
+def read_network_file(fname):
+    """Read network file
 
     Parameters
     ----------
@@ -19,8 +20,35 @@ def load_network(fname):
     text = [line for line in text if line != ""]
     text = [line for line in text if not line.startswith("#")]
 
-    print(text)
     return [isotopes.str_to_reaction(line) for line in text]
+
+def load_network(reactions, dir="./reactions/"):
+    """Load network
+
+    Parameters
+    ----------
+    reactions : list
+        List of nuclear reaction dicts.
+    dir : string
+        Directory to check for reactions
+    """
+
+    reactions_path = reaclib.read_reaction_list(dir)
+
+    reactions_data = []
+    for reaction in reactions:
+        reaction = isotopes.reaction_to_str(reaction)
+        try:
+            path = reactions_path[reaction]
+        except KeyError:
+            print(f"ERROR: no file for the reaction \"{reaction}\" "
+                  f"found in \"{dir}\". Try downloading the missing "
+                   "reaction from JINA Reaclib and/or regenerate the "
+                   "reaction list.\n")
+            raise
+
+        reactions_data.append(reaclib.read_file(path))
+    return reactions_data
 
 def draw_network(reactions, show_all=False, subs=[], show=True):
     """Draw nuclear reaction network
@@ -64,7 +92,6 @@ def draw_network(reactions, show_all=False, subs=[], show=True):
                 pyplot.plot([Z1, Z], [A1, A], "g-", alpha=0.5)
     if show_all:
         for orig, final in subs:
-            print(isotopes.AZN_to_str((*orig, 1)))
             name = isotopes.AZN_to_str((*orig, 1))
             pyplot.gca().annotate(f"${name}$", xy=final, xycoords="data", size=16)
     pyplot.xlabel("$Z$ (element)")
@@ -73,7 +100,3 @@ def draw_network(reactions, show_all=False, subs=[], show=True):
     pyplot.gca().set_aspect(1)
     pyplot.grid()
     pyplot.show()
-
-network = load_network("./networks/cnocycle") + load_network("./networks/ppchain")
-
-draw_network(network, True, subs=[[(1, 1), (1, 10)],[(4, 2), (10,1)]])
