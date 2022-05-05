@@ -1,0 +1,14 @@
+# PP chain start
+p(p,)d
+d(p,)he3
+# pp I branch
+he3(he3,2p)he4
+# pp II branch
+he4(he3,)be7
+be7(,)li7
+li7(p,he4)he4
+# pp III branch
+be7(p,)b8
+b8(,he4)he4
+# pp IV branch
+he3(p,)he4

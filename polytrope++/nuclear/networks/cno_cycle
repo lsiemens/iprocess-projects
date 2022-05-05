@@ -1,0 +1,19 @@
+#CNO cycle 1
+c12(p,)n13
+n13(,)c13
+c13(p,)n14
+n14(p,)o15
+o15(,)n15
+n15(p,he4)c12
+#CNO cycle 2
+n15(p,)o16
+o16(p,)f17
+f17(,)o17
+o17(p,he4)n14
+#CNO cycle 3
+o17(p,)f18
+f18(,)o18
+o18(p,he4)n15
+#CNO cycle 4
+o18(p,)f19
+f19(p,he4)o16
