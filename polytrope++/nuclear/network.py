@@ -158,8 +158,3 @@ def draw_network(reactions, show_all=False, subs=[], show=True):
     pyplot.gca().set_aspect(1)
     pyplot.grid()
     pyplot.show()
-
-#reactions = read_network_file("./networks/pp_branch_I")
-#particles, dydt = build_network(reactions, 1, 1)
-#Y_0 = [0.97, 0.1, 0.1, 0.1]
-#print(dydt(0.0, Y_0))

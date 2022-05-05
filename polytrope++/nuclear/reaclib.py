@@ -173,21 +173,23 @@ def make_reaction_list(dir="./reactions/"):
     """
 
     text = ["# reaction file"]
-    for file in os.listdir(dir):
-        path = os.path.join(dir, file)
-        if os.path.isfile(path):
-            if file.endswith(".md"):
-                continue
-            if file == fname_reactions:
-                continue
+    for root, dirs, files in os.walk(dir):
+        for file in files:
+            path = os.path.join(root, file)
+            if os.path.isfile(path):
+                if file.endswith(".md"):
+                    continue
+                if file == fname_reactions:
+                    continue
 
-            try:
-                reaction, _, _ = read_file(path)
-                reaction = isotopes.reaction_to_str(reaction)
-                text.append(f"{reaction} {file}")
-            except:
-                print(f"Failed to read \"{path}\", skipping")
-                continue
+                try:
+                    reaction, _, _ = read_file(path)
+                    reaction = isotopes.reaction_to_str(reaction)
+                    text.append(f"{reaction} {path.replace(dir, '', 1)}")
+                except:
+                    print(f"Failed to read \"{path}\", skipping")
+                    continue
+
     with open(os.path.join(dir, fname_reactions), "w") as fout:
         fout.write("\n".join(text))
 
