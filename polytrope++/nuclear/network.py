@@ -1,9 +1,11 @@
 """Manage nuclear reaction networks
 """
 
+import numpy
+from matplotlib import pyplot
+
 import isotopes
 import reaclib
-from matplotlib import pyplot
 
 def read_network_file(fname):
     """Read network file
@@ -29,8 +31,8 @@ def load_network(reactions, dir="./reactions/"):
     ----------
     reactions : list
         List of nuclear reaction dicts.
-    dir : string
-        Directory to check for reactions
+    dir : string, optional
+        Directory to check for reactions. The default is "./reactions/"
     """
 
     reactions_path = reaclib.read_reaction_list(dir)
@@ -49,6 +51,62 @@ def load_network(reactions, dir="./reactions/"):
 
         reactions_data.append(reaclib.read_file(path))
     return reactions_data
+
+def build_network(reactions, T9, rho, dir="./reactions"): # TODO
+    """Build network at constant T9 and rho
+
+    Parameters
+    ----------
+    reactions : list
+        List of nuclear reaction dicts.
+    T9 : float
+        The tempurature in Gigakelvin.
+    rho : float
+        The density in g/cm^3
+    dir : string
+        Directory to check for reactions. The default is "./reactions/"
+    """
+    reactions_data = load_network(reactions, dir)
+    particles = []
+    for reaction in reactions:
+        particles += reaction["reactants"] + reaction["products"]
+    particles = [particle[:-1] for particle in particles]
+    particles = list(set(particles))
+
+    sort_secondary = lambda AZN:AZN[0]
+    particles = sorted(particles, key=sort_secondary)
+    sort_primary = lambda AZN:AZN[1]
+    particles = sorted(particles, key=sort_primary)
+
+    def dYdt(t, Y):
+        Y = numpy.asarray(Y)
+        dYdt = numpy.zeros(Y.shape)
+        for reaction, q_value, llambda in reactions_data:
+            reactants = reaction["reactants"]
+            products = reaction["products"]
+
+            mask_A = []
+            N_A = []
+            for AZN in reactants:
+                mask_A.append(particles.index(AZN[:-1]))
+                N_A.append(AZN[-1])
+            N_A = numpy.array(N_A)
+
+            N_B = []
+            mask_B = []
+            for AZN in products:
+                mask_B.append(particles.index(AZN[:-1]))
+                N_B.append(AZN[-1])
+            N_B = numpy.array(N_B)
+
+            Y_A = Y[mask_A]
+            rate_factor = reaclib.rate_factor(Y_A, N_A, llambda, T9, rho)
+
+            dYdt[mask_A] -= N_A*rate_factor
+            dYdt[mask_B] += N_B*rate_factor
+        return dYdt
+
+    return particles, dYdt
 
 def draw_network(reactions, show_all=False, subs=[], show=True):
     """Draw nuclear reaction network
@@ -100,3 +158,8 @@ def draw_network(reactions, show_all=False, subs=[], show=True):
     pyplot.gca().set_aspect(1)
     pyplot.grid()
     pyplot.show()
+
+#reactions = read_network_file("./networks/pp_branch_I")
+#particles, dydt = build_network(reactions, 1, 1)
+#Y_0 = [0.97, 0.1, 0.1, 0.1]
+#print(dydt(0.0, Y_0))

@@ -19,6 +19,7 @@ Refrences
 
 import os
 import numpy
+import scipy.special
 
 import isotopes
 
@@ -136,6 +137,29 @@ def read_file(fname):
                                      + a[6]*numpy.log(T9)), axis=0)
     return reaction, Q_value, reaction_rate
 
+def rate_factor(Y, N, reaction_rate, T9, rho): #TODO
+    """Get rate factor
+
+    Y_A^na Y_B^nb rho^(na + nb - 1) lambda / na! nb!
+
+    Parameters
+    ----------
+    reaction : dict
+        Dictonary of reactants and products
+    reaction_rate : function
+        The reaction rate function
+    T9 : float, array
+            Tempurature in Gigakelvin
+
+    Returns
+    -------
+    float
+        Rate factor
+    """
+    Y = numpy.asarray(Y)
+    N = numpy.asarray(N)
+    return numpy.product(Y**N)*rho**(numpy.sum(N) - 1)*reaction_rate(T9)/numpy.product(scipy.special.factorial(N))
+
 def make_reaction_list(dir="./reactions/"):
     """Make reaction list
 
@@ -181,8 +205,16 @@ def read_reaction_list(dir="./reactions/"):
         Dictonary where the keys are reaction names and the value is the
         path to a reaction rate file for said reaction.
     """
-    with open(os.path.join(dir, fname_reactions), "r") as fin:
-        text = fin.read().split("\n")[1:]
+    try:
+        with open(os.path.join(dir, fname_reactions), "r") as fin:
+            text = fin.read().split("\n")[1:]
+    except FileNotFoundError:
+        print("ERROR: reaction list file not found.")
+        regenerate = input("Regenerate reaction list? [y/n]: ").lower()
+        if regenerate.startswith("y"):
+            make_reaction_list(dir)
+            return read_reaction_list(dir)
+        raise
 
     reactions_path = {}
     for line in text:
