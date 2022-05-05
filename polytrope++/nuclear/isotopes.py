@@ -84,7 +84,7 @@ def AZN_to_str(AZN, capitalize=True):
     mass = str(A)
     return num + elem + mass
 
-def reaction_name(reaction):
+def reaction_to_str(reaction):
     """Get reaction name
 
     Parameters
@@ -100,7 +100,7 @@ def reaction_name(reaction):
     # get reactants if more than one particel of main reactant split it
     # into two and move the first reactant to main_reactant, then
     # convert AZN to string
-    reactants = reaction["reactant"]
+    reactants = reaction["reactants"].copy()
     if reactants[0][-1] != 1:
         main_reactant = (*reactants[0][:-1], 1)
         A, Z, N = reactants[0]
@@ -111,7 +111,7 @@ def reaction_name(reaction):
     main_reactant = AZN_to_str(main_reactant)
     reactants = " ".join([AZN_to_str(reactant) for reactant in reactants])
 
-    products = reaction["product"]
+    products = reaction["products"].copy()
     if products[0][-1] != 1:
         main_product = (*products[0][:-1], 1)
         A, Z, N = products[0]
@@ -123,3 +123,57 @@ def reaction_name(reaction):
     products = " ".join([AZN_to_str(product) for product in products])
 
     return main_reactant + "(" + reactants + ", " + products + ")" + main_product
+
+def str_to_reaction(str):
+    """Get reaction from name
+
+    Parameters
+    ----------
+    string
+        Reaction equation
+
+    Returns
+    -------
+    dict
+        dict of reactants and products
+    """
+    str = str.lower()
+
+    # split the reaction name into its four compoments
+    main_reactant, str = str.split("(", 1)
+    reactants, str = str.split(",", 1)
+    reactants = reactants.split(" ")
+
+    products, main_product = str.split(")", 1)
+    products = products.split(" ")
+
+    # remove null entries
+    reactants = [reactant for reactant in reactants if (reactant != "")]
+    products = [product for product in products if (product != "")]
+
+    # conver isotope/particle names to AZNs
+    main_reactant = str_to_AZN(main_reactant)
+    reactants = [str_to_AZN(reactant) for reactant in reactants]
+    products = [str_to_AZN(product) for product in products]
+    main_product = str_to_AZN(main_product)
+
+    # combine reactants and main_reactant
+    if len(reactants) != 0:
+        if main_reactant[:-1] == reactants[0][:-1]:
+            A, Z, N = reactants[0]
+            reactants[0] = (A, Z, N + 1)
+        else:
+            reactants = [main_reactant] + reactants
+    else:
+        reactants = [main_reactant]
+
+    if len(products) != 0:
+        if main_product[:-1] == products[0][:-1]:
+            A, Z, N = products[0]
+            products[0] = (A, Z, N + 1)
+        else:
+            products = [main_product] + products
+    else:
+        products = [main_product]
+
+    return {"reactants":reactants, "products":products}

@@ -87,8 +87,8 @@ def read_file(fname):
         products = [isotopes.str_to_AZN(name) for name in products]
         products = sorted(products, key=sort_key, reverse=True)
 
-        reaction = {"reactant":reactants,
-                    "product":products}
+        reaction = {"reactants":reactants,
+                    "products":products}
 
         Q_value = float(head[-1])
 
