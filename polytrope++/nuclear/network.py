@@ -78,29 +78,44 @@ def build_network(reactions, T9, rho, dir="./reactions"): # TODO
     sort_primary = lambda AZN:AZN[1]
     particles = sorted(particles, key=sort_primary)
 
+    mask_As = []
+    N_As = []
+    mask_Bs = []
+    N_Bs = []
+    rates = []
+
+    for i, (reaction, q_value, rate) in enumerate(reactions_data):
+        reactants = reaction["reactants"]
+        products = reaction["products"]
+
+        mask_A = []
+        N_A = []
+        for AZN in reactants:
+            mask_A.append(particles.index(AZN[:-1]))
+            N_A.append(AZN[-1])
+        N_A = numpy.array(N_A)
+
+        N_B = []
+        mask_B = []
+        for AZN in products:
+            mask_B.append(particles.index(AZN[:-1]))
+            N_B.append(AZN[-1])
+        N_B = numpy.array(N_B)
+
+        mask_As.append(mask_A)
+        N_As.append(N_A)
+
+        mask_Bs.append(mask_B)
+        N_Bs.append(N_B)
+
+        rates.append(rate(T9))
+
     def dYdt(t, Y):
         Y = numpy.asarray(Y)
         dYdt = numpy.zeros(Y.shape)
-        for reaction, q_value, llambda in reactions_data:
-            reactants = reaction["reactants"]
-            products = reaction["products"]
-
-            mask_A = []
-            N_A = []
-            for AZN in reactants:
-                mask_A.append(particles.index(AZN[:-1]))
-                N_A.append(AZN[-1])
-            N_A = numpy.array(N_A)
-
-            N_B = []
-            mask_B = []
-            for AZN in products:
-                mask_B.append(particles.index(AZN[:-1]))
-                N_B.append(AZN[-1])
-            N_B = numpy.array(N_B)
-
+        for mask_A, N_A, mask_B, N_B, rate in zip(mask_As, N_As, mask_Bs, N_Bs, rates):
             Y_A = Y[mask_A]
-            rate_factor = reaclib.rate_factor(Y_A, N_A, llambda, T9, rho)
+            rate_factor = reaclib.rate_factor(Y_A, N_A, rate, rho)
 
             dYdt[mask_A] -= N_A*rate_factor
             dYdt[mask_B] += N_B*rate_factor

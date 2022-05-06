@@ -137,7 +137,7 @@ def read_file(fname):
                                      + a[6]*numpy.log(T9)), axis=0)
     return reaction, Q_value, reaction_rate
 
-def rate_factor(Y, N, reaction_rate, T9, rho):
+def rate_factor(Y, N, reaction_rate, rho):
     """Get rate factor
 
     Y_A^na Y_B^nb rho^(na + nb - 1) lambda / na! nb!
@@ -148,10 +148,8 @@ def rate_factor(Y, N, reaction_rate, T9, rho):
         list of molar abundances
     N : array
         number of particles involved for each type
-    reaction_rate : function
-        The reaction rate function
-    T9 : float
-            Tempurature in Gigakelvin
+    reaction_rate : float
+        The reaction rate
     rho : float
         density in g/cm^3
 
@@ -162,7 +160,7 @@ def rate_factor(Y, N, reaction_rate, T9, rho):
     """
     Y = numpy.asarray(Y)
     N = numpy.asarray(N)
-    return numpy.product(Y**N)*rho**(numpy.sum(N) - 1)*reaction_rate(T9)/numpy.product(scipy.special.factorial(N))
+    return numpy.product(Y**N)*rho**(numpy.sum(N) - 1)*reaction_rate/numpy.product(scipy.special.factorial(N))
 
 def make_reaction_list(dir="./reactions/"):
     """Make reaction list
