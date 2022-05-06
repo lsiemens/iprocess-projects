@@ -137,19 +137,23 @@ def read_file(fname):
                                      + a[6]*numpy.log(T9)), axis=0)
     return reaction, Q_value, reaction_rate
 
-def rate_factor(Y, N, reaction_rate, T9, rho): #TODO
+def rate_factor(Y, N, reaction_rate, T9, rho):
     """Get rate factor
 
     Y_A^na Y_B^nb rho^(na + nb - 1) lambda / na! nb!
 
     Parameters
     ----------
-    reaction : dict
-        Dictonary of reactants and products
+    Y : array
+        list of molar abundances
+    N : array
+        number of particles involved for each type
     reaction_rate : function
         The reaction rate function
-    T9 : float, array
+    T9 : float
             Tempurature in Gigakelvin
+    rho : float
+        density in g/cm^3
 
     Returns
     -------
@@ -185,7 +189,10 @@ def make_reaction_list(dir="./reactions/"):
                 try:
                     reaction, _, _ = read_file(path)
                     reaction = isotopes.reaction_to_str(reaction)
-                    text.append(f"{reaction} {path.replace(dir, '', 1)}")
+                    path = path.replace(dir, "", 1)
+                    if path.startswith("/"):
+                        path = path[1:]
+                    text.append(f"{reaction} {path}")
                 except:
                     print(f"Failed to read \"{path}\", skipping")
                     continue
