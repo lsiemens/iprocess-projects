@@ -1,0 +1,27 @@
+# reaction file
+Be9(,a n)a be9-gna-he4-ac12
+N15(p,a)C12 cno_cycle/n15-pa-c12-nacr
+O17(p,a)N14 cno_cycle/o17-pa-n14-il10
+C13(p,)N14 cno_cycle/c13-pg-n14-nacr
+N13(,)C13 cno_cycle/n13--c13-wc12
+F17(,)O17 cno_cycle/f17--o17-wc12
+F18(,)O18 cno_cycle/f18--o18-wc12
+O18(p,a)N15 cno_cycle/o18-pa-n15-il10
+N14(p,)O15 cno_cycle/n14-pg-o15-im05
+O15(,)N15 cno_cycle/o15--n15-wc12
+N15(p,)O16 cno_cycle/n15-pg-o16-li10
+Na19(p,)Mg20 cno_cycle/na19-pg-mg20-ths8
+O16(p,)F17 cno_cycle/o16-pg-f17-ia08
+O17(p,)F18 cno_cycle/o17-pg-f18-il10
+C12(p,)N13 cno_cycle/c12-pg-n13-ls09
+O18(p,)F19 cno_cycle/o18-pg-f19-il10
+F19(p,a)O16 cno_cycle/f19-pa-o16-nacr
+Be7(,)Li7 pp_chain/be7--li7-ec
+a(He3,)Be7 pp_chain/he3-ag-be7-cd08
+He3(He3,2p)a pp_chain/he3-he3pp-he4-nacr
+Be7(p,)B8 pp_chain/be7-pg-b8-nacr
+B8(,a)a pp_chain/b8-a-he4-wc12
+p(p,)d pp_chain/p-p-d-ec
+He3(p,)a pp_chain/he3-p-he4-bet
+d(p,)He3 pp_chain/d-pg-he3-de04
+Li7(p,a)a pp_chain/li7-pa-he4-de04

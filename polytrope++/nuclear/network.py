@@ -3,6 +3,7 @@
 
 import numpy
 from matplotlib import pyplot
+import requests
 
 import isotopes
 import reaclib
@@ -37,6 +38,7 @@ def load_network(reactions, dir="./reactions/"):
 
     reactions_path = reaclib.read_reaction_list(dir)
 
+    download = None
     reactions_data = []
     for reaction in reactions:
         reaction = isotopes.reaction_to_str(reaction)
@@ -44,12 +46,26 @@ def load_network(reactions, dir="./reactions/"):
             path = reactions_path[reaction]
         except KeyError:
             print(f"ERROR: no file for the reaction \"{reaction}\" "
-                  f"found in \"{dir}\". Try downloading the missing "
-                   "reaction from JINA Reaclib and/or regenerate the "
-                   "reaction list.\n")
+                   "found in reaction list. Try downloading the "
+                   "missing reaction from JINA Reaclib and/or "
+                   "regenerating the reaction list.\n")
             raise
 
-        reactions_data.append(reaclib.read_file(path))
+        try:
+            reactions_data.append(reaclib.read_file(path))
+        except FileNotFoundError:
+            if download is None:
+                download = input("Download missing Reaclib files? [y/n]:").lower()
+            if not download.startswith("y"):
+                raise
+
+            print(f"Downloading rate data for {reaction}")
+            try:
+                reaclib.download_reaction(reaction, reactions_path[reaction])
+            except requests.HTTPError:
+                reaclib.download_reaction(reaction, reactions_path[reaction],
+                                          use_set=False)
+            reactions_data.append(reaclib.read_file(path))
     return reactions_data
 
 def build_network(reactions, T9, rho, dir="./reactions"): # TODO

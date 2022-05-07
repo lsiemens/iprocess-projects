@@ -20,6 +20,8 @@ Refrences
 import os
 import numpy
 import scipy.special
+import requests
+import time
 
 import isotopes
 
@@ -229,3 +231,71 @@ def read_reaction_list(dir="./reactions/"):
         reactions_path[reaction] = os.path.join(dir, file)
 
     return reactions_path
+
+def download_reaction(reaction, file, use_set=True):
+    """Download nuclear reaction rate data from JINA Reaclib
+    """
+    timeout = 2.5 # wait before making request from JINA Reaclib
+    path, file = os.path.split(file)
+    reaction = isotopes.str_to_reaction(reaction)
+    num_reactants = sum([N for A, Z, N in reaction["reactants"]])
+    num_products = sum([N for A, Z, N in reaction["products"]])
+    format = (num_reactants, num_products)
+
+    head, middle, tail, set = file.lower().split("-", 3)
+    if format == (1, 1):
+        middle = ","
+    elif (format[0] == 1):
+        if middle.startswith("g"):
+            middle = middle[0] + "," + middle[1:]
+        else:
+            middle = "," + middle
+    elif (format[1] == 1):
+        if middle.endswith("g"):
+            middle = middle[:-1] + "," + middle[-1]
+        else:
+            middle = middle + ","
+    else:
+        if middle.isalpha():
+            #all one character particle labels
+            middle = middle[:format[0] - 1] + "," + middle[format[0] - 1:]
+        else:
+            species = []
+            string = ""
+            for char in middle[::-1]:
+                string = char + string
+                if string.isalpha():
+                    species = [string] + species
+                    string = ""
+
+                symbol = "".join([c for c in string if not c.isdigit()])
+                if symbol in isotopes.elements:
+                    species = [string] + species
+                    string = ""
+            species = species[:format[0] - 1] + [","] + species[format[0] - 1:]
+            middle = "".join(species)
+    reaction_name = f"{head}({middle}){tail}/{set}"
+    if not use_set:
+        reaction_name = f"{head}({middle}){tail}"
+
+    # get rateID from JINA Reaclib
+    time.sleep(timeout)
+    JINA_Reaclib = "https://reaclib.jinaweb.org/"
+    url_metadata = os.path.join(JINA_Reaclib, reaction_name)
+    response = requests.post(url_metadata)
+    response.raise_for_status()
+    response = str(response.content).split("&")
+    response = [line for line in response if "rateID" in line]
+    rateID = response[0].split("=")[-1]
+
+    # get reaclib file from JINA Reaclib
+    time.sleep(timeout)
+    php_request = f"difout.php?action=cfreaclib&rateID={rateID}&filename={file}&no910=0"
+    url_data = os.path.join(JINA_Reaclib, php_request)
+    response = requests.post(url_data)
+    response.raise_for_status()
+    response = response.content
+
+    os.makedirs(path, exist_ok=True)
+    with open(os.path.join(path, file), "wb") as fout:
+        fout.write(response)
