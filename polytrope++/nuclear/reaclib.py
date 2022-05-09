@@ -175,7 +175,6 @@ def make_reaction_list(dir="./reactions/"):
         Directory to scan for nuclear reaction rates. The default is
         "./reactions/"
     """
-
     text = ["# reaction file"]
     for root, dirs, files in os.walk(dir):
         for file in files:
@@ -234,6 +233,19 @@ def read_reaction_list(dir="./reactions/"):
 
 def download_reaction(reaction, file, use_set=True):
     """Download nuclear reaction rate data from JINA Reaclib
+
+    Parameters
+    ----------
+    reaction : string
+        Reaction equation
+    file : string
+        File name for the reaction rate data. It must have the format
+        "path/A-BC-D-E" where A is the primary reactant, B and C are
+        the seconday reactants and products respectivly, D is the
+        primary product and E is the dataset label
+    use_set : bool, optional
+        If true, specify dataset label when downloading data from JINA
+        Reaclib. The default is True
     """
     timeout = 2.5 # wait before making request from JINA Reaclib
     path, file = os.path.split(file)
@@ -242,6 +254,9 @@ def download_reaction(reaction, file, use_set=True):
     num_products = sum([N for A, Z, N in reaction["products"]])
     format = (num_reactants, num_products)
 
+    # split file name into A, BC, D and E. Determine how to split BC to
+    # get B and C, and recombine the parts into the format expected by
+    # JINA Reaclib "A(B,C)D/E"
     head, middle, tail, set = file.lower().split("-", 3)
     if format == (1, 1):
         middle = ","

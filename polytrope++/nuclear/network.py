@@ -15,8 +15,12 @@ def read_network_file(fname):
     ----------
     fname : string
         Path to network file
-    """
 
+    Returns
+    -------
+    list
+        List of nuclear reaction dicts
+    """
     with open(fname, "r") as fin:
         text = fin.read().split("\n")
     text = [line.strip().lower() for line in text]
@@ -34,14 +38,20 @@ def load_network(reactions, dir="./reactions/"):
         List of nuclear reaction dicts.
     dir : string, optional
         Directory to check for reactions. The default is "./reactions/"
-    """
 
+    Returns
+    -------
+    list
+        List of reaclib rate tuples of the form,
+        (reaction dict, Q-value, reaction_rate function)
+    """
     reactions_path = reaclib.read_reaction_list(dir)
 
     download = None
     reactions_data = []
     for reaction in reactions:
         reaction = isotopes.reaction_to_str(reaction)
+        # try to get reaction rate file path from reaction list
         try:
             path = reactions_path[reaction]
         except KeyError:
@@ -51,6 +61,7 @@ def load_network(reactions, dir="./reactions/"):
                    "regenerating the reaction list.\n")
             raise
 
+        # try to read reaction rate data
         try:
             reactions_data.append(reaclib.read_file(path))
         except FileNotFoundError:
@@ -60,15 +71,18 @@ def load_network(reactions, dir="./reactions/"):
                 raise
 
             print(f"Downloading rate data for {reaction}")
+            # try to download missing reaction rate data from JINA Reaclib
             try:
                 reaclib.download_reaction(reaction, reactions_path[reaction])
             except requests.HTTPError:
+                # try downloading again with out specifying the dataset
+                # for the reaction
                 reaclib.download_reaction(reaction, reactions_path[reaction],
                                           use_set=False)
             reactions_data.append(reaclib.read_file(path))
     return reactions_data
 
-def build_network(reactions, T9, rho, dir="./reactions"): # TODO
+def build_network(reactions, T9, rho, dir="./reactions"):
     """Build network at constant T9 and rho
 
     Parameters
@@ -81,6 +95,15 @@ def build_network(reactions, T9, rho, dir="./reactions"): # TODO
         The density in g/cm^3
     dir : string
         Directory to check for reactions. The default is "./reactions/"
+
+    Returns
+    -------
+    list
+        List of AZN tuples of the particles in the reaction network
+    function
+        Function dYdt(t, Y), is the time derivative of the molar
+        abundance vector Y. Note that each molar abundance Y[i]
+        corrisponds to the particle with the AZN given in particles[i]
     """
     reactions_data = load_network(reactions, dir)
     particles = []
@@ -89,6 +112,7 @@ def build_network(reactions, T9, rho, dir="./reactions"): # TODO
     particles = [particle[:-1] for particle in particles]
     particles = list(set(particles))
 
+    # sort particles by element with isotopes in order of their mass
     sort_secondary = lambda AZN:AZN[0]
     particles = sorted(particles, key=sort_secondary)
     sort_primary = lambda AZN:AZN[1]

@@ -129,7 +129,7 @@ def str_to_reaction(str):
 
     Parameters
     ----------
-    string
+    str : string
         Reaction equation
 
     Returns
