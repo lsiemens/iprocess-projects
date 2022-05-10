@@ -151,6 +151,25 @@ def build_network(reactions, T9, rho, dir="./reactions"):
         rates.append(rate(T9))
 
     def dYdt(t, Y):
+        """Reaction network differental equation
+
+        dYdt(t, Y), is the time derivative of the molar
+        abundance vector Y. Note that each molar abundance Y[i]
+        corrisponds to the particle with the AZN given in particles[i]
+
+        Parameters
+        ----------
+        time : float
+            The time
+        Y : array
+            Molar abundance vector. Note that Y[i] = X[i]/A_i where X[i]
+            is the mass fraction and A_i is the molar mass of the isotope
+
+        Returns
+        -------
+        array
+            The differential dYdt
+        """
         Y = numpy.asarray(Y)
         dYdt = numpy.zeros(Y.shape)
         for mask_A, N_A, mask_B, N_B, rate in zip(mask_As, N_As, mask_Bs, N_Bs, rates):
@@ -163,7 +182,7 @@ def build_network(reactions, T9, rho, dir="./reactions"):
 
     return particles, dYdt
 
-def draw_network(reactions, show_all=False, subs=[], show=True):
+def draw_network(reactions, show_all=False, subs=[]):
     """Draw nuclear reaction network
 
     Parameters
@@ -176,8 +195,6 @@ def draw_network(reactions, show_all=False, subs=[], show=True):
     subs : list, optional
         list of pairs of AZNs to substitue, only applies to secondary
         isotopes. The default is [].
-    show : bool, optional
-        If true the graph will show automaticaly. The defalut is False.
     """
     for reaction in reactions:
         reactants = reaction["reactants"]
