@@ -77,7 +77,7 @@ def read_file(fname):
 
     return X_i, logR, logT, tables
 
-def linear_opacity(opacity_data, table_num=72): # TODO Debug
+def linear_opacity(opacity_data, table_num=72):
     """Get opacity function using linear interpolation
     """
     X_i, logR, logT, tables = opacity_data
