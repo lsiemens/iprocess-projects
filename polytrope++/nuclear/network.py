@@ -5,8 +5,10 @@ import numpy
 from matplotlib import pyplot
 import requests
 
-import isotopes
-import reaclib
+from . import isotopes
+from . import reaclib
+
+N_Avogadro = 6.02214076e23 # avagadros number in [#/mol]
 
 def read_network_file(fname):
     """Read network file
@@ -82,17 +84,13 @@ def load_network(reactions, dir="./reactions/"):
             reactions_data.append(reaclib.read_file(path))
     return reactions_data
 
-def build_network(reactions, T9, rho, dir="./reactions"):
-    """Build network at constant T9 and rho
+def build_network(reactions, dir="./reactions"):
+    """Build network
 
     Parameters
     ----------
     reactions : list
         List of nuclear reaction dicts.
-    T9 : float
-        The tempurature in Gigakelvin.
-    rho : float
-        The density in g/cm^3
     dir : string
         Directory to check for reactions. The default is "./reactions/"
 
@@ -101,9 +99,7 @@ def build_network(reactions, T9, rho, dir="./reactions"):
     list
         List of AZN tuples of the particles in the reaction network
     function
-        Function dYdt(t, Y), is the time derivative of the molar
-        abundance vector Y. Note that each molar abundance Y[i]
-        corrisponds to the particle with the AZN given in particles[i]
+        function that gets dYdt at defined density and tempurature
     """
     reactions_data = load_network(reactions, dir)
     particles = []
@@ -122,7 +118,7 @@ def build_network(reactions, T9, rho, dir="./reactions"):
     N_As = []
     mask_Bs = []
     N_Bs = []
-    rates = []
+    q_values = []
 
     for i, (reaction, q_value, rate) in enumerate(reactions_data):
         reactants = reaction["reactants"]
@@ -148,41 +144,91 @@ def build_network(reactions, T9, rho, dir="./reactions"):
         mask_Bs.append(mask_B)
         N_Bs.append(N_B)
 
-        rates.append(rate(T9))
+        q_values.append(q_value)
 
-    def dYdt(t, Y):
-        """Reaction network differental equation
-
-        dYdt(t, Y), is the time derivative of the molar
-        abundance vector Y. Note that each molar abundance Y[i]
-        corrisponds to the particle with the AZN given in particles[i]
+    def get_dYdt(rho, T):
+        """Get dYdt given tempurature and density
 
         Parameters
         ----------
-        time : float
-            The time
-        Y : array
-            Molar abundance vector. Note that Y[i] = X[i]/A_i where X[i]
-            is the mass fraction and A_i is the molar mass of the isotope
+        rho : float
+            The density in g/cm^3
+        T : float
+            The tempurature in [K]
 
         Returns
         -------
-        array
-            The differential dYdt
+        function
+            Function dYdt(t, Y), is the time derivative of the molar
+            abundance vector Y. Note that each molar abundance Y[i]
+            corrisponds to the particle with the AZN given in particles[i]
+        function
+            Function epsilon(t, Y), is the nuclear reaction power density
         """
-        Y = numpy.asarray(Y)
-        dYdt = numpy.zeros(Y.shape)
-        for mask_A, N_A, mask_B, N_B, rate in zip(mask_As, N_As, mask_Bs, N_Bs, rates):
-            Y_A = Y[mask_A]
-            rate_factor = reaclib.rate_factor(Y_A, N_A, rate, rho)
+        rates = []
+        for i, (reaction, q_value, rate) in enumerate(reactions_data):
+            rates.append(rate(T/1e9))
 
-            dYdt[mask_A] -= N_A*rate_factor
-            dYdt[mask_B] += N_B*rate_factor
-        return dYdt
+        def dYdt(t, Y):
+            """Reaction network differental equation
 
-    return particles, dYdt
+            dYdt(t, Y), is the time derivative of the molar
+            abundance vector Y. Note that each molar abundance Y[i]
+            corrisponds to the particle with the AZN given in particles[i]
 
-def draw_network(reactions, show_all=False, subs=[]):
+            Parameters
+            ----------
+            time : float
+                The time
+            Y : array
+                Molar abundance vector. Note that Y[i] = X[i]/A_i where X[i]
+                is the mass fraction and A_i is the molar mass of the isotope
+
+            Returns
+            -------
+            array
+                The differential dYdt
+            """
+            Y = numpy.asarray(Y)
+            dYdt_value = numpy.zeros(Y.shape)
+            for mask_A, N_A, mask_B, N_B, rate in zip(mask_As, N_As, mask_Bs, N_Bs, rates):
+                Y_A = Y[mask_A]
+                rate_factor = reaclib.rate_factor(Y_A, N_A, rate, rho)
+
+                dYdt_value[mask_A] -= N_A*rate_factor
+                dYdt_value[mask_B] += N_B*rate_factor
+            return dYdt_value
+
+        def epsilon(t, Y):
+            """Nuclear energy production rate per unit mass
+
+            epsilon(t, Y), is the rate of thermonuclear energy production
+            per unit mass in [MeV/(s g)]
+
+            Parameters
+            ----------
+            time : float
+                The time
+            Y : array
+                Molar abundance vector. Note that Y[i] = X[i]/A_i where X[i]
+                is the mass fraction and A_i is the molar mass of the isotope
+
+            Returns
+            -------
+            float
+                Energy production rate per unit mass in [MeV/(s g)]
+            """
+            Y = numpy.asarray(Y)
+            epsilon_value = 0
+            for mask_A, N_A, mask_B, N_B, rate, q_value in zip(mask_As, N_As, mask_Bs, N_Bs, rates, q_values):
+                Y_A = Y[mask_A]
+                rate_factor = reaclib.rate_factor(Y_A, N_A, rate, rho)
+                epsilon_value += rate_factor*N_Avogadro*q_value
+            return epsilon_value
+        return dYdt, epsilon
+    return particles, get_dYdt
+
+def draw_network(reactions, show_all=False, subs=[], show=True):
     """Draw nuclear reaction network
 
     Parameters
@@ -195,6 +241,8 @@ def draw_network(reactions, show_all=False, subs=[]):
     subs : list, optional
         list of pairs of AZNs to substitue, only applies to secondary
         isotopes. The default is [].
+    show : bool, optional
+        If True, show the network. The default is False 
     """
     for reaction in reactions:
         reactants = reaction["reactants"]
@@ -229,4 +277,5 @@ def draw_network(reactions, show_all=False, subs=[]):
     pyplot.title("Nuclear reaction network")
     pyplot.gca().set_aspect(1)
     pyplot.grid()
-    pyplot.show()
+    if show:
+        pyplot.show()
