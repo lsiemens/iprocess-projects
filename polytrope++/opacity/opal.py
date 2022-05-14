@@ -16,11 +16,13 @@ def read_file(fname):
     X_i : list
         A list of X, Y, Z mass fraction for each table
     logR : list
-        axis values in the form log10(R), where R = rho/T6^3
+        axis values in the form log10(R) in [g/(cm^3 K^3)], where
+        R = rho/T^3. The standard definition of logR uses R = rho/T6^3
+        to convert logR into the standard version use logR + 18
     logT : list
-        axis value in the form log10(T) [k]
+        axis value in the form log10(T) in [k]
     tables : list
-        list of opacity tables as log10(k_R) [cm^2/g]
+        list of opacity tables as log10(k_R) in [cm^2/g]
     """
     with open(fname, "r") as fin:
         file = fin.read()
@@ -45,9 +47,11 @@ def read_file(fname):
         header = [float(value.split()[0]) for value in header]
         X_i.append(header[:3])
 
+        # log(R) in [g/(cm^3 K^3)]
+        # To match with the standar definition of log(R) use logR + 18
         logR = section[2]
         logR = logR.split()[1:]
-        logR = numpy.array([float(value) for value in logR])
+        logR = numpy.array([float(value) for value in logR]) - 18
         section = section[3:]
 
         logT = []
@@ -113,15 +117,14 @@ def linear_opacity(opacity_data, table_num=72):
         Returns
         -------
         array
-            Opacity in [cm^2/g]
+            Rosseland mean opacity in [cm^2/g]
         """
         rho = numpy.asarray(rho) # density in [g/cm^3]
         T = numpy.asarray(T) # tempurature in [K]
-        T6 = T/1e6 # tempurature in [MK]
         LogT = numpy.log10(T)
-        LogR = numpy.log10(rho/T6**3)
+        LogR = numpy.log10(rho/T**3)
 
         interp_fixed_T = numpy.array([numpy.interp(LogR, logR, fixed_T) for fixed_T in table])
         interp_T = numpy.array([numpy.interp(logt, logT, fixed_R) for fixed_R, logt in zip(interp_fixed_T.T, LogT)])
-        return 10**interp_T # opacity in [cm^2/g]
+        return 10**interp_T # spesific opacity in [cm^2/g]
     return opacity
