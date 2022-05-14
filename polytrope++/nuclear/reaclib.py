@@ -23,7 +23,7 @@ import scipy.special
 import requests
 import time
 
-import isotopes
+from . import isotopes
 
 # Reaclib chapters in the format {chapter:(# reactant, # products)}
 chapters = { 1:(1, 1),

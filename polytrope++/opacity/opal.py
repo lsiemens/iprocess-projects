@@ -79,6 +79,19 @@ def read_file(fname):
 
 def linear_opacity(opacity_data, table_num=72):
     """Get opacity function using linear interpolation
+
+    Parameters
+    ----------
+    opacity_data : tuple
+        Data from read_file
+    table_num : integer, optional
+        Index of the table to use, this defines the composition. The
+        default is 72
+
+    Returns
+    -------
+    function
+        Interpolated opacity function
     """
     X_i, logR, logT, tables = opacity_data
     X_i, table = X_i[table_num], tables[table_num]
