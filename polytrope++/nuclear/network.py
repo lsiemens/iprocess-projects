@@ -31,7 +31,7 @@ def read_network_file(fname):
 
     return [isotopes.str_to_reaction(line) for line in text]
 
-def load_network(reactions, dir="./reactions/"):
+def load_network(reactions, dir="./nuclear/reactions/"):
     """Load network
 
     Parameters
@@ -39,7 +39,8 @@ def load_network(reactions, dir="./reactions/"):
     reactions : list
         List of nuclear reaction dicts.
     dir : string, optional
-        Directory to check for reactions. The default is "./reactions/"
+        Directory to check for reactions. The default is
+        "./nuclear/reactions/"
 
     Returns
     -------
@@ -84,7 +85,7 @@ def load_network(reactions, dir="./reactions/"):
             reactions_data.append(reaclib.read_file(path))
     return reactions_data
 
-def build_network(reactions, dir="./reactions"):
+def build_network(reactions, dir="./nuclear/reactions/"):
     """Build network
 
     Parameters
@@ -92,14 +93,16 @@ def build_network(reactions, dir="./reactions"):
     reactions : list
         List of nuclear reaction dicts.
     dir : string
-        Directory to check for reactions. The default is "./reactions/"
+        Directory to check for reactions. The default is
+        "./nuclear/reactions/"
 
     Returns
     -------
     list
         List of AZN tuples of the particles in the reaction network
     function
-        function that gets dYdt at defined density and tempurature
+        function that gets dYdt and epsilon at defined density and
+        tempurature
     """
     reactions_data = load_network(reactions, dir)
     particles = []
@@ -146,13 +149,13 @@ def build_network(reactions, dir="./reactions"):
 
         q_values.append(q_value)
 
-    def get_dYdt(rho, T):
-        """Get dYdt given tempurature and density
+    def get_dYdt_epsilon(rho, T):
+        """Get dYdt and epsilon given tempurature and density
 
         Parameters
         ----------
         rho : float
-            The density in g/cm^3
+            The density in [g/cm^3]
         T : float
             The tempurature in [K]
 
@@ -167,7 +170,7 @@ def build_network(reactions, dir="./reactions"):
         """
         rates = []
         for i, (reaction, q_value, rate) in enumerate(reactions_data):
-            rates.append(rate(T/1e9))
+            rates.append(rate(T))
 
         def dYdt(t, Y):
             """Reaction network differental equation
@@ -179,15 +182,16 @@ def build_network(reactions, dir="./reactions"):
             Parameters
             ----------
             time : float
-                The time
+                The time in [s]
             Y : array
-                Molar abundance vector. Note that Y[i] = X[i]/A_i where X[i]
-                is the mass fraction and A_i is the molar mass of the isotope
+                Molar abundance vector in [mol/g]. Note that Y[i] = X[i]/A_i
+                where X[i] is the mass fraction and A_i is the molar
+                mass of the isotope
 
             Returns
             -------
             array
-                The differential dYdt
+                The differential dYdt in [mol/(s g)]
             """
             Y = numpy.asarray(Y)
             dYdt_value = numpy.zeros(Y.shape)
@@ -208,10 +212,11 @@ def build_network(reactions, dir="./reactions"):
             Parameters
             ----------
             time : float
-                The time
+                The time in [s]
             Y : array
-                Molar abundance vector. Note that Y[i] = X[i]/A_i where X[i]
-                is the mass fraction and A_i is the molar mass of the isotope
+                Molar abundance vector in [mol/g]. Note that Y[i] = X[i]/A_i
+                where X[i] is the mass fraction and A_i is the molar
+                mass of the isotope
 
             Returns
             -------
@@ -226,7 +231,7 @@ def build_network(reactions, dir="./reactions"):
                 epsilon_value += rate_factor*N_Avogadro*q_value
             return epsilon_value
         return dYdt, epsilon
-    return particles, get_dYdt
+    return particles, get_dYdt_epsilon
 
 def draw_network(reactions, show_all=False, subs=[], show=True):
     """Draw nuclear reaction network
@@ -242,7 +247,7 @@ def draw_network(reactions, show_all=False, subs=[], show=True):
         list of pairs of AZNs to substitue, only applies to secondary
         isotopes. The default is [].
     show : bool, optional
-        If True, show the network. The default is False 
+        If True, show the network. The default is False
     """
     for reaction in reactions:
         reactants = reaction["reactants"]

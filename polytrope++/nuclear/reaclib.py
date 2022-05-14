@@ -40,6 +40,8 @@ chapters = { 1:(1, 1),
 
 fname_reactions = "reaction_list"
 
+erg_per_Mev = 1.60217663e-6 # in [erg/MeV]
+
 def read_file(fname):
     """Read files using REACLIB 1/2 format
 
@@ -56,7 +58,7 @@ def read_file(fname):
     reaction : dict
         Dictonary of reactants and products
     Q_value : float
-        The energy released by the reaction in Mev
+        The energy released by the reaction in [erg]
     reaction_rate : function
         The reaction rate function
     """
@@ -97,7 +99,7 @@ def read_file(fname):
         reaction = {"reactants":reactants,
                     "products":products}
 
-        Q_value = float(head[-1])
+        Q_value = float(head[-1])*erg_per_Mev # convert MeV to erg
 
         width = 13
         values  = [file[i*3 + 1][width*j:width*(j + 1)] for j in range(4)]
@@ -106,19 +108,21 @@ def read_file(fname):
         a.append(values)
     a = numpy.array(a).T
 
-    def reaction_rate(T9):
+    def reaction_rate(T):
         """Nuclear reaction rate
 
         Parameters
         ----------
-        T9 : float, array
-            Tempurature in Gigakelvin
+        T : float, array
+            Tempurature in [K]
 
         Returns
         -------
         float, array
-            Reaction rate
+            Reaction rate, in [1/s] for unary rates, in [cm^3/(s mol)]
+            for binary rates, in [cm^6/(s mol^2)] for trinary rates ...
         """
+        T9 = 1e-9*T # Tempurature in [GK]
         try:
             len(T9)
             return numpy.sum(numpy.exp(
@@ -147,24 +151,25 @@ def rate_factor(Y, N, reaction_rate, rho):
     Parameters
     ----------
     Y : array
-        list of molar abundances
+        List of molar abundances in [mol/g]
     N : array
         number of particles involved for each type
     reaction_rate : float
-        The reaction rate
+        The reaction rate, in [1/s] for unary rates, in [cm^3/(s mol)]
+        for binary rates, in [cm^6/(s mol^2)] for trinary rates ...
     rho : float
-        density in g/cm^3
+        density in [g/cm^3]
 
     Returns
     -------
     float
-        Rate factor
+        Rate factor in [mol/(s g)]
     """
     Y = numpy.asarray(Y)
     N = numpy.asarray(N)
     return numpy.product(Y**N)*rho**(numpy.sum(N) - 1)*reaction_rate/numpy.product(scipy.special.factorial(N))
 
-def make_reaction_list(dir="./reactions/"):
+def make_reaction_list(dir="./nuclear/reactions/"):
     """Make reaction list
 
     helper file used to match reaction names with file names
@@ -173,7 +178,7 @@ def make_reaction_list(dir="./reactions/"):
     ----------
     dir : str, optional
         Directory to scan for nuclear reaction rates. The default is
-        "./reactions/"
+        "./nuclear/reactions/"
     """
     text = ["# reaction file"]
     for root, dirs, files in os.walk(dir):
@@ -199,13 +204,14 @@ def make_reaction_list(dir="./reactions/"):
     with open(os.path.join(dir, fname_reactions), "w") as fout:
         fout.write("\n".join(text))
 
-def read_reaction_list(dir="./reactions/"):
+def read_reaction_list(dir="./nuclear/reactions/"):
     """Read reaction list
 
     Parameters
     ----------
     dir : str, optional
-        Directory with reaction_list file. The default is "./reactions/"
+        Directory with reaction_list file. The default is
+        "./nuclear/reactions/"
 
     Returns
     -------
