@@ -51,7 +51,7 @@ def str_to_AZN(str):
         raise RuntimeError("Could not get mass number or atomic number")
     return (A, Z, N)
 
-def AZN_to_str(AZN, capitalize=True):
+def AZN_to_str(AZN, capitalize=True, particle_alt=True):
     """(A, Z, N) to isotope string
 
     (A, Z, N) to string of the form element abreviation, mass number or
@@ -62,6 +62,11 @@ def AZN_to_str(AZN, capitalize=True):
     AZ : tuple
         Tuple (A, Z, N) where A is the mass number, Z is the atomic
         number and N is the number of particles.
+    capitalize : bool, optional
+        If True then capitalize isotope name. The default is True.
+    particle_alt : bool, optional
+        If True use particle alternate name if it exists, for example
+        use 'a' instead of 'He4'. The default is True.
 
     Returns
     -------
@@ -74,9 +79,10 @@ def AZN_to_str(AZN, capitalize=True):
     else:
         num = str(N)
 
-    for key, value in particles.items():
-        if (A, Z) == value:
-            return num + key
+    if particle_alt:
+        for key, value in particles.items():
+            if (A, Z) == value:
+                return num + key
 
     elem = elements[Z - 1]
     if capitalize:

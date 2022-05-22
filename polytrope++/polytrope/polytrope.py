@@ -7,7 +7,7 @@ import scipy.integrate
 G = 6.674e-8 # in [dyne cm^2 / g^2]
 M_sol = 1.988e33 # in [g]
 R_sol = 6.957e10 # in [cm]
-
+L_sol = 3.83e33 # in [erg/s]
 
 # define y = <theta, chi'>, t = phi
 def get_dydt(alpha, beta, n):

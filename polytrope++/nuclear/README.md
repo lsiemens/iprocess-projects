@@ -9,6 +9,11 @@ $$-\frac{1}{\mathcal{N_A}}\partial_tY_A = -\frac{1}{\mathcal{N_B}}\partial_tY_B 
 
 Where $rho$ is the density, $\mathcal{N_i}$ is the number of particle of isotope $i$, $Y_i$ is the molar abundance per gram of isotope $i$ and $\nu = \mathcal{N_A} + \mathcal{N_B} - 1$. Note for an isotope $i$ with molar mass $m_i$ and mass fraction $X_i$ its molar abundance is $Y_i = \frac{X_i}{m_i}$. For a $n$-ary reaction the units of $\lambda$ are $[cm^{3 \cdot n} s^{-1} mol^{-n}]$. The energy realeased / Q value of the reactions are given in $[MeV]$. For systems involving many nuclear reactions then $\frac{dY_i}{dt} = \left. \sum \partial_t Y_i \right|_{A(B, C)D}$
 
+# Inital abundance #
+Inital abundance can be loaded from
+[iniabu](https://github.com/galactic-forensics/iniabu). iniabu can be
+installed with `pip install iniabu`, more details on the GitHub page.
+
 # To Do #
 Calculate reverse reaction, Ex SkyNet: A Modular Nuclear Reaction Network Library
 

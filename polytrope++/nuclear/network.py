@@ -5,6 +5,8 @@ import numpy
 from matplotlib import pyplot
 import requests
 
+from iniabu import inimf # use mass fractions
+
 from . import isotopes
 from . import reaclib
 
@@ -232,6 +234,56 @@ def build_network(reactions, dir="./nuclear/reactions/"):
             return epsilon_value
         return dYdt, epsilon
     return particles, get_dYdt_epsilon
+
+def initalize_mass_fraction(particles):
+    """Get inital mass fraction from iniabu
+
+    Parameters
+    ----------
+    particles : list
+        List of AZN tuples of the particles in the reaction network
+
+    Returns
+    -------
+    list
+        List of inital mass fraction from iniabu
+    """
+    particles = [isotopes.AZN_to_str(particle + (1,), particle_alt=False) for particle in particles]
+    return [inimf.iso[particle].abu_solar for particle in particles]
+
+def mass_frac_to_molar_abu(particles, X):
+    """Convert mass fraction to molar abundance
+
+    Parameters
+    ----------
+    particles : list
+        List of AZN tuples of the particles in the reaction network
+    X : list
+        List of mass fraction for each particle
+
+    Returns
+    -------
+    list
+        List of Molar abundances in [mol/g]
+    """
+    return [X_i/A for (A, Z), X_i in zip(particles, X)]
+
+def molar_abu_to_mass_frac(particles, Y):
+    """Convert mass fraction to molar abundance
+
+    Parameters
+    ----------
+    particles : list
+        List of AZN tuples of the particles in the reaction network
+    Y : list
+        List of Molar abundances in [mol/g]
+
+    Returns
+    -------
+    list
+        List of mass fraction for each particle
+    """
+    return [Y_i*A for (A, Z), Y_i in zip(particles, Y)]
 
 def draw_network(reactions, show_all=False, subs=[], show=True):
     """Draw nuclear reaction network
