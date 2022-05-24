@@ -2,6 +2,7 @@
 """
 
 import numpy
+from scipy.interpolate import interp1d
 
 def read_file(fname):
     """Read OPAL Rosseland mean opacity tables
@@ -14,7 +15,7 @@ def read_file(fname):
     Returns
     -------
     X_i : list
-        A list of X, Y, Z mass fraction for each table
+        A list of X, Z mass fraction for each table
     logR : list
         axis values in the form log10(R) in [g/(cm^3 K^3)], where
         R = rho/T^3. The standard definition of logR uses R = rho/T6^3
@@ -45,7 +46,7 @@ def read_file(fname):
 
         header = section[0].split("=")[1:]
         header = [float(value.split()[0]) for value in header]
-        X_i.append(header[:3])
+        X_i.append([header[0], header[2]])
 
         # log(R) in [g/(cm^3 K^3)]
         # To match with the standar definition of log(R) use logR + 18
@@ -78,53 +79,113 @@ def read_file(fname):
 
     logR = logRs[0]
     logT = logTs[0]
+    tables = numpy.array(tables)
+
+    # remove empty rows from Opacity Project tables
+    if numpy.all(numpy.isnan(tables[:, -4:])):
+        logT = logT[:-4]
+        tables = tables[:, :-4]
 
     return X_i, logR, logT, tables
 
-def linear_opacity(opacity_data, table_num=72):
-    """Get opacity function using linear interpolation
+def fill_tables(opacity_data):
+    """Fill missing entries from table using interpolation
+
+    Parameters
+    ----------
+    opacity_data : tuple
+        data from read opacity
+
+    Returns
+    -------
+    tuple
+        data from read opacity with out missing entries
+    """
+    X_i, logR, logT, tables = opacity_data
+    kind = "linear"
+
+    for i, table in enumerate(tables):
+        notNan = numpy.logical_not(numpy.isnan(table))
+
+        if numpy.any(numpy.isnan(table)):
+            interp_row = [interp1d(logR[notNan[j]], table[j][notNan[j]],
+                                   kind=kind, fill_value="extrapolate")(logR)
+                          for j in range(len(logT))]
+
+            interp_column = [interp1d(logT[notNan[:, j]], table[:, j][notNan[:, j]],
+                                      kind=kind, fill_value="extrapolate")(logT)
+                             for j in range(len(logR))]
+
+            interp_row = numpy.array(interp_row)
+            interp_column = numpy.array(interp_column).T
+
+            tables[i] = (0.5*(interp_column + interp_row)).round(3)
+    return X_i, logR, logT, tables
+
+def regularize_tables(opacity_data):
+    """Regularize opacity data to a 4-D grid
 
     Parameters
     ----------
     opacity_data : tuple
         Data from read_file
-    table_num : integer, optional
-        Index of the table to use, this defines the composition. The
-        default is 72
 
     Returns
     -------
-    function
-        Interpolated opacity function
+    X : list
+        list of hydrogen mass fractions
+    Z : list
+        list of metalicity
+    logR : list
+        axis values in the form log10(R) in [g/(cm^3 K^3)], where
+        R = rho/T^3. The standard definition of logR uses R = rho/T6^3
+        to convert logR into the standard version use logR + 18
+    logT : list
+        axis value in the form log10(T) in [k]
+    tables : list
+        list of opacity tables as log10(k_R) in [cm^2/g]
     """
-    X_i, logR, logT, tables = opacity_data
-    X_i, table = X_i[table_num], tables[table_num]
+    X_i, logR, logT, tables = fill_tables(opacity_data)
 
-    def opacity(rho, T, X, Z):
-        """Interpolate opacity along rho, T, X, Z radial profiles
+    # find metalicity values
+    Z = []
+    x_0 = X_i[0][0]
+    for x, z in X_i:
+        if x == x_0:
+            Z.append(z)
+        else:
+            break
 
-        Parameters
-        ----------
-        rho : array
-            Array of densities in [g/cm^3]
-        T : array
-            Array of tempuratures in [K]
-        X : array
-            Array of hydrogen mass fraction
-        Z : array
-            Array of metalisity
+    # find hydrogen mass fractions
+    X = []
+    for i in range(0, len(X_i), len(Z)):
+        if X_i[i][0] == X_i[i + len(Z) - 1][0]:
+            X.append(X_i[i][0])
+        else:
+            break
 
-        Returns
-        -------
-        array
-            Rosseland mean opacity in [cm^2/g]
-        """
-        rho = numpy.asarray(rho) # density in [g/cm^3]
-        T = numpy.asarray(T) # tempurature in [K]
-        LogT = numpy.log10(T)
-        LogR = numpy.log10(rho/T**3)
+    # check the percentage of missing tables
+    data_fraction = 0
+    for x in X:
+        for z in Z:
+            if [x, z] in X_i:
+                data_fraction += 1
+    data_fraction = data_fraction / (len(X)*len(Z))
+    if (data_fraction < 0.90):
+        print(f"WARNING: {1 - data_fraction:.2f}% of opacity tables are missing.")
 
-        interp_fixed_T = numpy.array([numpy.interp(LogR, logR, fixed_T) for fixed_T in table])
-        interp_T = numpy.array([numpy.interp(logt, logT, fixed_R) for fixed_R, logt in zip(interp_fixed_T.T, LogT)])
-        return 10**interp_T # spesific opacity in [cm^2/g]
-    return opacity
+    # rearange table and interpolate
+    regularized_data = []
+    for x in X:
+        const_X = []
+        for z in Z:
+            if [x, z] in X_i:
+                i = X_i.index([x, z])
+                table = tables[i]
+            else: # fill missing tables
+                #TODO interpolate missing table
+                raise NotImplementedError("TODO interpolate missing table")
+            const_X.append(table)
+        regularized_data.append(const_X)
+    regularized_data = numpy.array(regularized_data)
+    return X, Z, logT, logR, regularized_data
