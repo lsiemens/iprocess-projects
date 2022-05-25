@@ -2,13 +2,15 @@
 """
 
 import numpy
-from matplotlib import pyplot
 import requests
+import scipy.integrate
+from matplotlib import pyplot
 
 from iniabu import inimf # use mass fractions
 
 from . import isotopes
 from . import reaclib
+from . import plot
 
 N_Avogadro = 6.02214076e23 # avagadros number in [#/mol]
 
@@ -183,7 +185,7 @@ def build_network(reactions, dir="./nuclear/reactions/"):
 
             Parameters
             ----------
-            time : float
+            t : float
                 The time in [s]
             Y : array
                 Molar abundance vector in [mol/g]. Note that Y[i] = X[i]/A_i
@@ -235,6 +237,94 @@ def build_network(reactions, dir="./nuclear/reactions/"):
         return dYdt, epsilon
     return particles, get_dYdt_epsilon
 
+def solve_network(rho, T, Y_0, get_dYdt_epsilon, t_range=(0., 1.), **kwargs):
+    """Solve nuclear reaction network
+
+    Parameters
+    ----------
+    rho : float
+        The density in [g/cm^3]
+    T : float
+        The tempurature in [K]
+    Y_0 : array
+        The inital molar abundance vector in [mol/g]
+    get_dYdt_epsilon : function
+        Function that gets dYdt and epsilon at defined density and
+        tempurature for a given nuclear network
+    t_range : tuple, optional
+        Time range in [s]. The default is (0., 1.)
+    kwargs : dict
+        Key word arguments for scipy solve_ivp
+
+    Returns
+    -------
+    t : array
+        time coordinate array in [s]
+    Y : array
+        Molar abundance evolution array in [mol/g]
+    status : integer
+        Status of solve_ivp
+    """
+    dYdt, _ = get_dYdt_epsilon(rho, T)
+    solve = scipy.integrate.solve_ivp(dYdt, t_range, Y_0, method="Radau", **kwargs)
+    if not solve.success:
+        print(solve.message)
+    return solve["t"], solve["y"], solve.status
+
+def solve_radial_network(rho, T, Y_0, get_dYdt_epsilon, t_range=(0., 1.), plot_args=None, **kwargs):
+    """Solve nuclear reaction network along a radial profile
+
+    Parameters
+    ----------
+    rho : array
+        The density in [g/cm^3]
+    T : array
+        The tempurature in [K]
+    Y_0 : array
+        The inital molar abundance vector in [mol/g]
+    get_dYdt_epsilon : function
+        Function that gets dYdt and epsilon at defined density and
+        tempurature for a given nuclear network
+    t_range : tuple, optional
+        Time range in [s]. The default is (0., 1.)
+    kwargs : dict
+        Key word arguments for scipy solve_ivp
+
+    Returns
+    -------
+    Y : array
+        Molar abundance evolution array in [mol/g]
+    status : integer
+        Status of solve_ivp
+    """
+    if plot_args is not None:
+        particles, show, ifig = plot_args
+
+    Y = numpy.zeros(shape=Y_0.shape)
+    t = numpy.zeros(shape=rho.shape)
+    status = 0
+    for i in range(len(rho)):
+        t_i, Y_i, status_i = solve_network(rho[i], T[i], Y_0[i],
+                                           get_dYdt_epsilon, t_range,
+                                           **kwargs)
+
+        if status_i < 0:
+            status = -1
+
+        if plot_args is not None:
+            if i % (len(rho)//5) == 0:
+                ifig += 0.1
+                plot.isotope_evolution(t_i, Y_i, particles, show=show,
+                                       ifig=f"{ifig:.1f}")
+
+        Y[i] = Y_i[:, -1]
+        t[i] = t_i[-1]
+
+    if not numpy.all(numpy.isclose(t_range[-1], t)):
+        status = -1
+
+    return Y, status
+
 def initalize_mass_fraction(particles):
     """Get inital mass fraction from iniabu
 
@@ -284,55 +374,3 @@ def molar_abu_to_mass_frac(particles, Y):
         List of mass fraction for each particle
     """
     return [Y_i*A for (A, Z), Y_i in zip(particles, Y)]
-
-def draw_network(reactions, show_all=False, subs=[], show=True):
-    """Draw nuclear reaction network
-
-    Parameters
-    ----------
-    reactions : list
-        List of nuclear reaction dicts.
-    show_all : bool, optional
-        If true, show secondary isotopes in the reactions. The default
-        is False.
-    subs : list, optional
-        list of pairs of AZNs to substitue, only applies to secondary
-        isotopes. The default is [].
-    show : bool, optional
-        If True, show the network. The default is False
-    """
-    for reaction in reactions:
-        reactants = reaction["reactants"]
-        products = reaction["products"]
-        main_reactant = reactants[0]
-        main_product = products[0]
-        A0, Z0 = main_reactant[:-1]
-        A1, Z1 = main_product[:-1]
-        pyplot.arrow(Z0, A0, Z1 - Z0, A1 - A0, width=0.05, length_includes_head=True)
-
-        if show_all:
-            for reactant in reactants:
-                A, Z = reactant[:-1]
-                for orig, final in subs:
-                    if (A, Z) == orig:
-                        A, Z = final
-                        break
-                pyplot.plot([Z, Z0], [A, A0], "r-", alpha=0.5)
-            for product in products:
-                A, Z = product[:-1]
-                for orig, final in subs:
-                    if (A, Z) == orig:
-                        A, Z = final
-                        break
-                pyplot.plot([Z1, Z], [A1, A], "g-", alpha=0.5)
-    if show_all:
-        for orig, final in subs:
-            name = isotopes.AZN_to_str((*orig, 1))
-            pyplot.gca().annotate(f"${name}$", xy=final, xycoords="data", size=16)
-    pyplot.xlabel("$Z$ (element)")
-    pyplot.ylabel("$A$ (isotope)")
-    pyplot.title("Nuclear reaction network")
-    pyplot.gca().set_aspect(1)
-    pyplot.grid()
-    if show:
-        pyplot.show()
