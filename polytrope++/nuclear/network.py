@@ -51,7 +51,7 @@ def load_network(reactions, dir="./nuclear/reactions/"):
     -------
     list
         List of reaclib rate tuples of the form,
-        (reaction dict, Q-value, reaction_rate function)
+        (reaction dict, Q-value in [erg], reaction_rate function)
     """
     reactions_path = reaclib.read_reaction_list(dir)
 
@@ -105,9 +105,12 @@ def build_network(reactions, dir="./nuclear/reactions/"):
     -------
     list
         List of AZN tuples of the particles in the reaction network
-    function
-        function that gets dYdt and epsilon at defined density and
+    get_dYdt_epsilon : function
+        Function that gets dYdt and epsilon at defined density and
         tempurature
+    X_metalicity : function
+        Function that returns the total hydrogen mass fraction and
+        the metalicity
     """
     reactions_data = load_network(reactions, dir)
     particles = []
@@ -226,7 +229,7 @@ def build_network(reactions, dir="./nuclear/reactions/"):
             Returns
             -------
             float
-                Energy production rate per unit mass in [MeV/(s g)]
+                Energy production rate per unit mass in [erg/(s g)]
             """
             Y = numpy.asarray(Y)
             epsilon_value = 0
