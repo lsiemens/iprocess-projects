@@ -68,15 +68,15 @@ def network_graph(reactions, show_all=False, subs=[], show=True, ifig=None):
             pyplot.show()
 
 def isotope_evolution(t, Y, particles, show=True, ifig=None):
-    """Plot evolution of mass fractions
+    """Plot evolution of isotope mass fractions
 
     Parameters
     ----------
-    t : array
+    t : array(N)
         The time in [s]
-    Y : array
+    Y : array(I, N)
         Molar abundance evolution array in [mol/g]
-    particles : list
+    particles : list(I)
         List of AZN tuples of the particles in the reaction network
     show : bool, optional
         If True, show the network. The default is False
@@ -97,6 +97,58 @@ def isotope_evolution(t, Y, particles, show=True, ifig=None):
     pyplot.xlabel("t [yr]")
     pyplot.ylabel("mass fraction")
     pyplot.title("Nuclear reaction network evolution")
+    pyplot.ylim(1e-10, 1.5)
+    pyplot.legend()
+
+    if show:
+        if ifig is not None:
+            pyplot.show(ifig)
+        else:
+            pyplot.show()
+
+def isotope_profile(x, Y, particles, massCoord=True, relativeCoord=True, show=True, ifig=None):
+    """Plot isotope mass fraction vs coordinate (mass or radius)
+
+    Parameters
+    ----------
+    x : array(N)
+        Mass coordinate or radial coordinate
+    Y : array(I, N)
+        Molar abundance evolution array in [mol/g]
+    particles : list(I)
+        List of AZN tuples of the particles in the reaction network
+    massCoord : bool, optional
+        If True then x is treated as a mass coordinate, otherwise it is
+        assumed to be a radial coodinate. The default is True
+    relativeCoord : bool, optional
+        If True plot coordinate as fraction of the maximum, otherwise
+        plot with appropriate units. The default is True
+    show : bool, optional
+        If True, show the network. The default is False
+    ifig : integer, optional
+        Figure number. The default is None
+    """
+
+    X = network.molar_abu_to_mass_frac(particles, Y)
+
+    if ifig is not None:
+        pyplot.close(ifig)
+        pyplot.figure(ifig)
+
+    for species, AZ in zip(X, particles):
+        label = isotopes.AZN_to_str((*AZ, 1), particle_alt=False)
+        if relativeCoord:
+            pyplot.semilogy(x/x.max(), species, label=label)
+        else:
+            pyplot.semilogy(x, species, label=label)
+
+    if massCoord:
+        pyplot.xlabel("mass coordinate in [g]")
+    else:
+        pyplot.xlabel("radius in [cm]")
+
+    pyplot.ylabel("mass fraction")
+    pyplot.title("Isotope Profile")
     pyplot.ylim(1e-10, 1.5)
     pyplot.legend()
 

@@ -4,6 +4,7 @@
 import numpy
 import requests
 import scipy.integrate
+import scipy.interpolate
 from matplotlib import pyplot
 
 from iniabu import inimf # use mass fractions
@@ -187,14 +188,14 @@ def build_network(reactions, dir="./nuclear/reactions/"):
             ----------
             t : float
                 The time in [s]
-            Y : array
+            Y : array(I)
                 Molar abundance vector in [mol/g]. Note that Y[i] = X[i]/A_i
                 where X[i] is the mass fraction and A_i is the molar
                 mass of the isotope
 
             Returns
             -------
-            array
+            array(I)
                 The differential dYdt in [mol/(s g)]
             """
             Y = numpy.asarray(Y)
@@ -217,7 +218,7 @@ def build_network(reactions, dir="./nuclear/reactions/"):
             ----------
             time : float
                 The time in [s]
-            Y : array
+            Y : array(I)
                 Molar abundance vector in [mol/g]. Note that Y[i] = X[i]/A_i
                 where X[i] is the mass fraction and A_i is the molar
                 mass of the isotope
@@ -235,9 +236,40 @@ def build_network(reactions, dir="./nuclear/reactions/"):
                 epsilon_value += rate_factor*N_Avogadro*q_value
             return epsilon_value
         return dYdt, epsilon
-    return particles, get_dYdt_epsilon
 
-def solve_network(rho, T, Y_0, get_dYdt_epsilon, t_range=(0., 1.), **kwargs):
+    # since this will be used in the differential equations precompute
+    # isotope masks
+    H_mask = numpy.array([AZ[1] == 1 for AZ in particles])
+    He_mask = numpy.array([AZ[1] == 2 for AZ in particles])
+
+    def X_metalicity(Y):
+        """Get hydrogen mass fraction and metalicity from molar abundances
+
+        Note: X + Y + Z = 1, where X is the total hydrogen mass fraction
+        Y is the total helium mass fraction and Z is the metalicity.
+        So the parameters X, Y and Z can be specified with just X and Z.
+
+        Parameters
+        ----------
+        Y : array(I)
+            Molar abundance vector in [mol/g]
+
+        Returns
+        -------
+        X : float
+            Total hydrogen mass fraction
+        Z : float
+            Metalicity
+        """
+        X = molar_abu_to_mass_frac(particles, Y)
+        X_H = numpy.sum(X[H_mask], axis=0)
+        X_He = numpy.sum(X[He_mask], axis=0)
+        Z = 1 - X_H - X_He
+        return X_H, Z
+
+    return particles, get_dYdt_epsilon, X_metalicity
+
+def solve_network(rho, T, Y_0, get_dYdt_epsilon, t_range=(0., 3.155e7), **kwargs):
     """Solve nuclear reaction network
 
     Parameters
@@ -246,21 +278,21 @@ def solve_network(rho, T, Y_0, get_dYdt_epsilon, t_range=(0., 1.), **kwargs):
         The density in [g/cm^3]
     T : float
         The tempurature in [K]
-    Y_0 : array
+    Y_0 : array(I)
         The inital molar abundance vector in [mol/g]
     get_dYdt_epsilon : function
         Function that gets dYdt and epsilon at defined density and
         tempurature for a given nuclear network
     t_range : tuple, optional
-        Time range in [s]. The default is (0., 1.)
+        Time range in [s]. The default is (0., 3.155e7)
     kwargs : dict
         Key word arguments for scipy solve_ivp
 
     Returns
     -------
-    t : array
+    t : array(T)
         time coordinate array in [s]
-    Y : array
+    Y : array(I, T)
         Molar abundance evolution array in [mol/g]
     status : integer
         Status of solve_ivp
@@ -271,28 +303,32 @@ def solve_network(rho, T, Y_0, get_dYdt_epsilon, t_range=(0., 1.), **kwargs):
         print(solve.message)
     return solve["t"], solve["y"], solve.status
 
-def solve_radial_network(rho, T, Y_0, get_dYdt_epsilon, t_range=(0., 1.), plot_args=None, **kwargs):
+def solve_radial_network(rho, T, Y_0, get_dYdt_epsilon, t_range=(0., 3.155e7), plot_args=None, **kwargs):
     """Solve nuclear reaction network along a radial profile
 
     Parameters
     ----------
-    rho : array
+    rho : array(R)
         The density in [g/cm^3]
-    T : array
+    T : array(R)
         The tempurature in [K]
-    Y_0 : array
+    Y_0 : array(I, R)
         The inital molar abundance vector in [mol/g]
     get_dYdt_epsilon : function
         Function that gets dYdt and epsilon at defined density and
         tempurature for a given nuclear network
     t_range : tuple, optional
-        Time range in [s]. The default is (0., 1.)
+        Time range in [s]. The default is (0., 3.155e7)
+    plot_args  : tuple, optional
+        If plot_args is None then plot is not shown, otherwise is a
+        tuple containing the arguments for the plot (particles, show, ifig).
+        The default is None
     kwargs : dict
         Key word arguments for scipy solve_ivp
 
     Returns
     -------
-    Y : array
+    Y : array(I, R)
         Molar abundance evolution array in [mol/g]
     status : integer
         Status of solve_ivp
@@ -304,7 +340,7 @@ def solve_radial_network(rho, T, Y_0, get_dYdt_epsilon, t_range=(0., 1.), plot_a
     t = numpy.zeros(shape=rho.shape)
     status = 0
     for i in range(len(rho)):
-        t_i, Y_i, status_i = solve_network(rho[i], T[i], Y_0[i],
+        t_i, Y_i, status_i = solve_network(rho[i], T[i], Y_0[:, i],
                                            get_dYdt_epsilon, t_range,
                                            **kwargs)
 
@@ -317,7 +353,7 @@ def solve_radial_network(rho, T, Y_0, get_dYdt_epsilon, t_range=(0., 1.), plot_a
                 plot.isotope_evolution(t_i, Y_i, particles, show=show,
                                        ifig=f"{ifig:.1f}")
 
-        Y[i] = Y_i[:, -1]
+        Y[:, i] = Y_i[:, -1]
         t[i] = t_i[-1]
 
     if not numpy.all(numpy.isclose(t_range[-1], t)):
@@ -356,7 +392,7 @@ def mass_frac_to_molar_abu(particles, X):
     list
         List of Molar abundances in [mol/g]
     """
-    return [X_i/A for (A, Z), X_i in zip(particles, X)]
+    return numpy.array([X_i/A for (A, Z), X_i in zip(particles, X)])
 
 def molar_abu_to_mass_frac(particles, Y):
     """Convert mass fraction to molar abundance
@@ -373,4 +409,28 @@ def molar_abu_to_mass_frac(particles, Y):
     list
         List of mass fraction for each particle
     """
-    return [Y_i*A for (A, Z), Y_i in zip(particles, Y)]
+    return numpy.array([Y_i*A for (A, Z), Y_i in zip(particles, Y)])
+
+def interpolate_molar_abundance(m, Y, minimum_cutoff=1e-100):
+    """Interpolate radial molar abundance vector
+
+    Parameters
+    ----------
+    m : array(R)
+        Mass coordinate in [g]
+    Y : array(I, R)
+        radial molar abundance vector in [mol/g]
+    minimum_cutoff : float, optional
+        Minimum molar abundance. The default is 1e-100
+
+    Returns
+    -------
+    function
+        Molar abundance interpolation function. It takes a mass coordinate
+        float or array(N) and returns a molar abundance profile array(I, N)
+        or array(N) if given a single mass coordinate.
+    """
+    logY = numpy.log10(numpy.maximum(minimum_cutoff, numpy.abs(Y)))
+    logY_interp = scipy.interpolate.interp1d(m, logY, kind=2, fill_value="extrapolate")
+    Y_interp = lambda m:10**logY_interp(m)
+    return Y_interp
