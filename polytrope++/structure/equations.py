@@ -27,11 +27,33 @@ def get_dPrLTdM(get_dYdt_epsilon, X_metalicity, opacity, Y_interpolate):
     Returns
     -------
     function
-        Function dPrLTdM(M, PrLT), is the time derivative of the structure
-        variables PrLT, where the variables are Pressure in [dyn/cm^2],
-        radius in [cm], Luminosity in [erg/s] and Tempurature in [K].
+        Function dPrLTdM(M, PrLT), is the mass coordinate derivative of
+        the structure variables PrLT, where the variables are Pressure
+        in [dyne/cm^2], radius in [cm], Luminosity in [erg/s] and
+        Tempurature in [K]
         """
     def dPrLTdM(M, PrLT):
+        """stellar structure differental equation
+
+        dPrLTdM(M, PrLT), is the mass coordinate derivative of the
+        structure variables PrLT, where the variables are Pressure in
+        [dyne/cm^2], radius in [cm], Luminosity in [erg/s] and
+        Tempurature in [K]
+
+        Parameters
+        ----------
+        M : float
+            Mass coordinate in [g]
+        PrLT : list
+            the structure variables PrLT, where the variables are Pressure
+            in [dyne/cm^2], radius in [cm], Luminosity in [erg/s] and
+            Tempurature in [K]
+
+        Returns
+        -------
+        list
+            The differential dPrLTdM in [dyne/(cm^2 g), cm/g, erg/(s g), K/g]
+        """
         P, r, L, T = numpy.abs(PrLT)
 
         Y = Y_interpolate(M) # molar abundance vector in [mol/g]

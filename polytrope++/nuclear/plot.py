@@ -1,4 +1,4 @@
-"""Plots and graphs
+"""Plots and graphs of nuclear network
 """
 
 from matplotlib import pyplot
