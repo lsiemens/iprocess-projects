@@ -2,6 +2,7 @@
 """
 
 import numpy
+import scipy.integrate
 
 G = 6.674e-8 # gravitational constant in [dyne cm^2 / g^2]
 R = 8.314e7 # gass constant in [erg/(g K)]
@@ -80,6 +81,7 @@ def get_dPrLTdM(get_dYdt_epsilon, X_metalicity, opacity, Y_interpolate):
         dTdM_rad = -3*k_R*L/(256*numpy.pi**2*r**4*sigma*T**3) # thermal equilibrium
 
         # Schwarzschild stability criterion
+        # TODO consider rearanging terms to remove division by zero
         if (P/T)*dTdM_rad/dPdM < (1 - 1/gamma):
             dTdM = dTdM_rad
         else:
@@ -108,9 +110,46 @@ def zT(M, PrLT):
     return T
 zT.terminal = True
 
-def BC(M, PrLT):
+def core_error(M, PrLT):
     P_s, r_s, L_s, T_s = PrLT[:, 0]
     P_c, r_c, L_c, T_c = PrLT[:, -1]
     M_s = M[0]
     M_c = M[-1]
     return [M_c/M_s, r_c/r_s, L_c/L_s]
+
+def solve_core(dPrLTdM, M, r, T, **kwargs):
+    """Solve stellar structure equations given surface parameters
+    
+    Parameters
+    """
+    k_R = 0.2*(1 + 0.7)
+
+    P = (2/3)*G*M/(r**2*k_R)
+    L = 4*numpy.pi*r**2*sigma*T**4
+
+    events = [zr, zL]
+    PrLT = [P, r, L, T]
+    solve = scipy.integrate.solve_ivp(dPrLTdM, (M, 0), PrLT, events=events, method="Radau", **kwargs)
+    if not solve.success:
+        print(solve.message)
+
+    M, PrLT = solve["t"], solve["y"]
+    error = core_error(M, PrLT)
+    return M, PrLT, solve.status, numpy.linalg.norm(error)
+
+def minimize_grid(dPrLTdM, M, r_range, T_range, n=5):
+    min_error = float("inf")
+    min_param = None
+    k = 0
+    for i, r in enumerate(numpy.linspace(*r_range, n)):
+        for j, T in enumerate(numpy.linspace(*T_range, n)):
+            k += 1
+            if k % max(1, n**2//10) == 0:
+                print(k)
+
+            _, _, _, error = solve_core(dPrLTdM, M, r, T)
+            if error < min_error:
+                min_error = error
+                min_param = (r, T)
+
+    return min_param, min_error
