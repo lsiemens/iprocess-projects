@@ -3,6 +3,8 @@ import scipy.interpolate
 
 from . import opal_eos
 
+R = 8.314e7 # in [erg/(g K)]
+
 def opal_data(fname):
     """Load equation of state function from OPAL EOS tables
 
@@ -55,7 +57,6 @@ def ideal_eos(P, T, X, Z):
     Z : float
         metalicity
     """
-    R = 8.314e7 # in [erg/(g K)]
     Rho = mu(X, Z)*P/(R*T)
     return Rho, 5/3.0 + 0*Rho
 
@@ -63,4 +64,18 @@ def approximate_eos(P, T, X, Z):
     pass
 
 def mu(X, Z):
-    return 4/(5*0.7 + 3 - 0.02)
+    """mean molecular weight
+
+    Parameters
+    ----------
+    X : float
+        hydrogen mass fraction
+    Z : float
+        metalicity
+
+    Returns
+    -------
+    mu : float
+        mean molecular weight
+    """
+    return 4/(5*X + 3 - Z)

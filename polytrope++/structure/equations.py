@@ -8,7 +8,7 @@ G = 6.674e-8 # gravitational constant in [dyne cm^2 / g^2]
 R = 8.314e7 # gass constant in [erg/(g K)]
 sigma = 5.67037442e-5 # Stefan-Boltzmann constant in [erg/(s cm^2 K^4)]
 
-def get_dPrLTdM(get_dYdt_epsilon, X_metalicity, opacity, Y_interpolate):
+def get_dPrLTdM(get_dYdt_epsilon, X_metalicity, opacity, EOS, Y_interpolate):
     """Get dPrLTdM structure equations
 
     Parameters
@@ -21,6 +21,8 @@ def get_dPrLTdM(get_dYdt_epsilon, X_metalicity, opacity, Y_interpolate):
         the metalicity
     opacity : function
         The opacity interpolation function
+    EOS : function
+        The equation of state function
     Y_interpolate : function
         Function that interpolates the molar abundance vector Y
         as a function of mass coorinate
@@ -32,7 +34,7 @@ def get_dPrLTdM(get_dYdt_epsilon, X_metalicity, opacity, Y_interpolate):
         the structure variables PrLT, where the variables are Pressure
         in [dyne/cm^2], radius in [cm], Luminosity in [erg/s] and
         Tempurature in [K]
-        """
+    """
     def dPrLTdM(M, PrLT):
         """stellar structure differental equation
 
@@ -60,11 +62,7 @@ def get_dPrLTdM(get_dYdt_epsilon, X_metalicity, opacity, Y_interpolate):
         Y = Y_interpolate(M) # molar abundance vector in [mol/g]
         X, Z = X_metalicity(Y) # hydrogen mass fraction and metalicity
 
-        # mean molecular weight
-        mu = 4/(5*X + 3 - Z)
-        gamma = 5/3
-
-        rho = mu*P/(R*T) # in [g/cm^3]
+        rho, gamma = EOS(P, T, X, Z) # with rho in [g/cm^3] and gamma is unitless
 
         # nuclear energy production density epsilon
         _, epsilon_fun = get_dYdt_epsilon(rho, T)
