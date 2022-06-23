@@ -57,7 +57,7 @@ def ideal_eos(P, T, X, Z):
     """
     R = 8.314e7 # in [erg/(g K)]
     Rho = mu(X, Z)*P/(R*T)
-    return Rho, 5/3.0 + 0*T
+    return Rho, 5/3.0 + 0*Rho
 
 def approximate_eos(P, T, X, Z):
     pass

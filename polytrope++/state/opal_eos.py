@@ -40,6 +40,20 @@ def read_file(fname):
     density = numpy.array(density)
 
     tables = []
+
+    if "density" not in file[0]:
+        raise RuntimeError("Expected start of first table")
+
+    # split columns names if seporated by double space
+    table_legend = [item.strip() for item in file[1].split("  ")]
+    # remove empty items
+    table_legend = [item for item in table_legend if len(item) > 0]
+
+    # get ids of colomns of interest
+    T_id = table_legend.index("T6")
+    P_id = table_legend.index("P(MB)")
+    gamma_id = table_legend.index("g1")
+
     for length in table_len:
         if "density" not in file[0]:
             raise RuntimeError("Expected start of table")
@@ -50,15 +64,14 @@ def read_file(fname):
         gamma = []
         for line in table:
             line = line.split()
-            T.append(float(line[0])*1e6)
-            P.append(float(line[2])*dyne_cm2_per_MBar)
-            gamma.append(float(line[8]))
+            T.append(float(line[T_id])*1e6)
+            P.append(float(line[P_id])*dyne_cm2_per_MBar)
+            gamma.append(float(line[gamma_id]))
         T = numpy.array(T)
         P = numpy.array(P)
         gamma = numpy.array(gamma)
 
         tables.append((T, P, gamma))
-
     return density, tables
 
 def fill_tables(eos_data):
@@ -120,7 +133,9 @@ def rearange(eos_data):
     regularized_data = fill_tables(eos_data)
     logRho_independent, logT, table_logP, table_gamma_rho = regularized_data
 
-    logP = sorted(table_logP[:, 0].tolist() + table_logP[:, -1].tolist())
+    logP = table_logP[:, 0].tolist() + table_logP[:, -1].tolist()
+    # sort and remove duplicate points
+    logP = sorted(list(set(logP)))
     logP = numpy.array(logP)
 
     table_logRho = []
