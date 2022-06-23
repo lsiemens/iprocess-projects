@@ -17,16 +17,10 @@ def read_file(fname):
 
     Returns
     -------
-    X_i : list
-        A list of X, Z mass fraction for each table
-    logR : list
-        axis values in the form log10(R) in [g/(cm^3 K^3)], where
-        R = rho/T^3. The standard definition of logR uses R = rho/T6^3
-        to convert logR into the standard version use logR + 18
-    logT : list
-        axis value in the form log10(T) in [k]
+    density : list
+        list of table densities
     tables : list
-        list of opacity tables as log10(k_R) in [cm^2/g]
+        tables of tempurature, pressure and gamma at the given densities
     """
     with open(fname, "r") as fin:
         file = fin.read().strip().split("\n")
@@ -44,7 +38,6 @@ def read_file(fname):
         density.append(float(header[5]))
 
     density = numpy.array(density)
-#    print(density)
 
     tables = []
     for length in table_len:
@@ -69,8 +62,26 @@ def read_file(fname):
     return density, tables
 
 def fill_tables(eos_data):
+    """fill missing entries in table
+
+    Parameters
+    ----------
+    eos_data : tuple
+        eos data from read_file
+
+    Returns
+    -------
+    logRho : array
+        logarithm of density axis
+    logT : array
+        logarithm of tempurature axis
+    logP : array
+        logarithm of pressure table
+    gamma : array
+        gamma table
+    """
     density, tables = eos_data
-    T = tables[0][0]
+    T = tables[0][0][::-1]
 
     logP = []
     gamma = []
@@ -88,6 +99,24 @@ def fill_tables(eos_data):
     return numpy.log10(density[::-1]), numpy.log10(T), logP, gamma
 
 def rearange(eos_data):
+    """rearange tables of logP(logRho, logT) to the form logRho(logP, logT)
+
+    Parameters
+    ----------
+    eos_data : tuple
+        eos data from read_file
+
+    Returns
+    -------
+    logP : array
+        logarithm of pressure axis
+    logT : array
+        logarithm of tempurature axis
+    logRho : array
+        logarithm of density table
+    gamma : array
+        gamma table
+    """
     regularized_data = fill_tables(eos_data)
     logRho_independent, logT, table_logP, table_gamma_rho = regularized_data
 
@@ -108,52 +137,4 @@ def rearange(eos_data):
     table_logRho = numpy.array(table_logRho).T
     table_gamma = numpy.array(table_gamma).T
 
-#    print(table_logRho.shape, logP.shape, logT.shape)
-
     return logP, logT, table_logRho, table_gamma
-
-"""density, tables = read_file("./tables/IEOS02z8x")
-
-lnrho, lnT, lnPs, gammas = fill_tables((density, tables))
-
-lP, lT, lRho, lgamma = rearange((lnrho, lnT, lnPs, gammas))
-
-print(lP.shape, lT.shape, lRho.shape, lgamma.shape)"""
-
-#pyplot.imshow(lnPs[:, ::-1])
-#pyplot.show()
-
-"""for P_rho in lnPs:
-    pyplot.plot(10**lnT, 10**P_rho)
-pyplot.show()
-
-for P_T in lnPs.T:
-    pyplot.plot(10**lnrho, 10**P_T)
-pyplot.show()
-
-for gamma_rho in gammas:
-    pyplot.plot(10**lnT, gamma_rho)
-pyplot.show()
-
-for gamma_T in gammas.T:
-    pyplot.plot(10**lnrho, gamma_T)
-pyplot.show()
-
-print("rearange")
-
-for Rho_P in lRho:
-    pyplot.plot(10**lP, 10**Rho_P)
-pyplot.show()
-
-for Rho_T in lRho.T:
-    pyplot.plot(10**lT, 10**Rho_T)
-pyplot.show()
-
-for gamma_T in lgamma.T:
-    pyplot.plot(10**lT, gamma_T)
-pyplot.show()
-
-for gamma_P in lgamma:
-    pyplot.plot(10**lP, gamma_P)
-pyplot.show()
-"""
