@@ -86,7 +86,104 @@ def get_dPrLTdM(get_dYdt_epsilon, X_metalicity, opacity, EOS, Y_interpolate):
             dTdM = (1 - 1/gamma)*(T/P)*dPdM
 
         return [dPdM, drdM, dLdM, dTdM]
-    return dPrLTdM
+
+    def radiative_cells(M, PrLT):
+        """Determine if a cell is radiative
+
+        Parameters
+        ----------
+        M : float
+            Mass coordinate in [g]
+        PrLT : list
+            the structure variables PrLT, where the variables are Pressure
+            in [dyne/cm^2], radius in [cm], Luminosity in [erg/s] and
+            Tempurature in [K]
+
+        Returns
+        -------
+        array
+            boolean array that is true where the cell is radiative
+        """
+        P, r, L, T = numpy.abs(PrLT)
+
+        Y = Y_interpolate(M) # molar abundance vector in [mol/g]
+        X, Z = X_metalicity(Y) # hydrogen mass fraction and metalicity
+
+        rho, gamma = EOS(P, T, X, Z) # with rho in [g/cm^3] and gamma is unitless
+
+        # rosseland mean opacity
+        k_R = opacity(rho, T, X, Z)
+
+        # structure equations
+        dPdM = -G*M/(4*numpy.pi*r**4) # hydrostatic equilbrium
+        dTdM_rad = -3*k_R*L/(256*numpy.pi**2*r**4*sigma*T**3) # thermal equilibrium
+
+        # Schwarzschild stability criterion
+        # TODO consider rearanging terms to remove division by zero
+        return (P/T)*dTdM_rad/dPdM < (1 - 1/gamma)
+
+    def convective_zones(M, PrLT):
+        """Get list of convective zones
+
+        Parameters
+        ----------
+        M : float
+            Mass coordinate in [g]
+        PrLT : list
+            the structure variables PrLT, where the variables are Pressure
+            in [dyne/cm^2], radius in [cm], Luminosity in [erg/s] and
+            Tempurature in [K]
+
+        Returns
+        -------
+        list
+            list of boolean arrays that are true where the cell is convective.
+            Each element of the list contains one continous convective zone
+        """
+        convective = numpy.logical_not(radiative_cells(M, PrLT))
+        bands = []
+
+        isBand = False # currently in convective band
+        for i, zone in enumerate(convective):
+            if (not isBand) and zone:
+                isBand = True
+                bands.append([False]*len(convective))
+
+            if isBand:
+                # add point to current active convective zone
+                # and stop at the next non-convective zone
+                bands[-1][i] = zone
+                isBand = zone
+        return numpy.array(bands)
+
+    def convective_mixing(M, PrLT):
+        """Get list of convective zones
+
+        Parameters
+        ----------
+        M : float
+            Mass coordinate in [g]
+        PrLT : list
+            the structure variables PrLT, where the variables are Pressure
+            in [dyne/cm^2], radius in [cm], Luminosity in [erg/s] and
+            Tempurature in [K]
+
+        Returns
+        -------
+        array
+            The molar abundance vector in [mol/g] after convective mixing
+        """
+        bands = convective_zones(M, PrLT)
+        Y = Y_interpolate(M) # molar abundance vector in [mol/g]
+
+        delta_M = numpy.diff(M.tolist() + [0])
+
+        # replace Y values in each band with the weighted mean
+        for band in bands:
+            Y_mixed = numpy.sum(Y[:, band]*delta_M[band]/numpy.sum(delta_M[band]), axis=1)
+            Y[:, band] = Y_mixed[:, numpy.newaxis]
+        return Y
+    return dPrLTdM, convective_mixing
 
 def zP(M, PrLT):
     P, r, L, T = PrLT
@@ -117,7 +214,7 @@ def core_error(M, PrLT):
 
 def solve_core(dPrLTdM, M, r, T, **kwargs):
     """Solve stellar structure equations given surface parameters
-    
+
     Parameters
     """
     k_R = 0.2*(1 + 0.7)
