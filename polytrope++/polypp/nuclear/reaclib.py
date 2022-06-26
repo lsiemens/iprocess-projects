@@ -25,6 +25,8 @@ import time
 
 from . import isotopes
 
+from polypp.constants import MeV
+
 # Reaclib chapters in the format {chapter:(# reactant, # products)}
 chapters = { 1:(1, 1),
              2:(1, 2),
@@ -39,8 +41,6 @@ chapters = { 1:(1, 1),
             11:(1, 4)}
 
 fname_reactions = "reaction_list"
-
-erg_per_Mev = 1.60217663e-6 # in [erg/MeV]
 
 def read_file(fname):
     """Read files using REACLIB 1/2 format
@@ -99,7 +99,7 @@ def read_file(fname):
         reaction = {"reactants":reactants,
                     "products":products}
 
-        Q_value = float(head[-1])*erg_per_Mev # convert MeV to erg
+        Q_value = float(head[-1])*MeV # convert MeV to erg
 
         width = 13
         values  = [file[i*3 + 1][width*j:width*(j + 1)] for j in range(4)]

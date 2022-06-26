@@ -1,11 +1,11 @@
 """Read OPAL opacity data
 """
 
-dyne_cm2_per_MBar = 1e12 # in [dyne/(cm^2 MBar)]
-
 import numpy
 from scipy.interpolate import interp1d
 from matplotlib import pyplot
+
+from polypp.constants import MBar
 
 def read_file(fname):
     """Read OPAL Equation of State data table
@@ -65,7 +65,7 @@ def read_file(fname):
         for line in table:
             line = line.split()
             T.append(float(line[T_id])*1e6)
-            P.append(float(line[P_id])*dyne_cm2_per_MBar)
+            P.append(float(line[P_id])*MBar) # convert MBar to cgs unints
             gamma.append(float(line[gamma_id]))
         T = numpy.array(T)
         P = numpy.array(P)

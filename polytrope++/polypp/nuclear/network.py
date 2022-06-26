@@ -13,7 +13,7 @@ from . import isotopes
 from . import reaclib
 from . import plot
 
-N_Avogadro = 6.02214076e23 # avagadros number in [#/mol]
+from polypp.constants import N_Avogadro
 
 def read_network_file(fname):
     """Read network file

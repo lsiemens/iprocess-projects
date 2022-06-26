@@ -4,11 +4,7 @@
 import numpy
 import scipy.integrate
 
-from polypp import constants
-
-G = 6.674e-8 # gravitational constant in [dyne cm^2 / g^2]
-R = 8.314e7 # gass constant in [erg/(g K)]
-sigma = 5.67037442e-5 # Stefan-Boltzmann constant in [erg/(s cm^2 K^4)]
+from polypp.constants import G, R, sigma, M_sol, R_sol, L_sol
 
 def get_dPrLTdM(get_dYdt_epsilon, X_metalicity, opacity, EOS, Y_interpolate):
     """Get dPrLTdM structure equations
@@ -354,11 +350,10 @@ def estimate_rT(M):
     T : float
         surface tempurature in [K]
     """
-    pass
-#    R = polytrope.R_sol*(M/polytrope.M_sol)**0.8
-#    L = polytrope.L_sol*(M/polytrope.M_sol)**3.5
-#    T = (L/(4*numpy.py*R**2*sigma))**(1/4)
-#    return R, T
+    R = R_sol*(M/M_sol)**0.8
+    L = L_sol*(M/M_sol)**3.5
+    T = (L/(4*numpy.pi*R**2*sigma))**(1/4)
+    return R, T
 
 def minimize_grid(dPrLTdM, M, r_range, T_range, n=5, return_values=False):
     """Solve stellar structure equations given surface parameters

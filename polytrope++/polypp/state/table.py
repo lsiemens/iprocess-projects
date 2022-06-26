@@ -2,8 +2,7 @@ import numpy
 import scipy.interpolate
 
 from . import opal_eos
-
-R = 8.314e7 # in [erg/(g K)]
+from polypp.constants import R
 
 def opal_data(fname):
     """Load equation of state function from OPAL EOS tables
