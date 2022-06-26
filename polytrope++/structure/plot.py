@@ -51,6 +51,38 @@ def PrLT(M, PrLT, massCoord=True, show=True, ifig=None):
         else:
             pyplot.show()
 
+def minimization_error(values, r_range, T_range, show=True, ifig=None):
+    """Plot minimization errors
+
+    Parameters
+    ----------
+    values : array
+        grid of solution error values
+    r_range : tuple
+        Range of radius in [cm]
+    T_range : tuple
+        Range of tempurature in [K]
+    show : bool, optional
+        If True, show the network. The default is False
+    ifig : integer, optional
+        Figure number. The default is None
+    """
+    if ifig is not None:
+        pyplot.close(ifig)
+        pyplot.figure(ifig)
+
+    pyplot.imshow(values, extent=(*T_range, *r_range), aspect="auto")
+    pyplot.xlabel("Surface tempurature [K]")
+    pyplot.ylabel("Star Radius [cm]")
+    pyplot.title("Solution error")
+    pyplot.legend()
+
+    if show:
+        if ifig is not None:
+            pyplot.show(ifig)
+        else:
+            pyplot.show()
+
 """
 ifig += 1; pyplot.close(ifig); pyplot.figure(ifig)
 pyplot.plot(M/M.max(), r/r.max(), label="radius $y = R$")
