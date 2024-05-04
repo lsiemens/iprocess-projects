@@ -1,3 +1,13 @@
+graph_1D_spring_system: 1D_spring.mp4
+	open 1D_spring.mp4
+
+1D_spring.mp4: 1D_spring_system
+	./1D_spring_system
+	ffmpeg -pattern_type glob -i "./tmp/*.png" 1D_spring.mp4
+
+1D_spring_system:
+	g++ 1D_spring_system.cpp -o 1D_spring_system -lboost_iostreams -lboost_system -lboost_filesystem
+
 graph_symplectic_spring: symplectic_spring
 	./symplectic_spring
 
@@ -16,3 +26,5 @@ euler_spring:
 clean:
 	rm euler_spring euler_spring.dat -f
 	rm symplectic_spring -f
+	rm 1D_spring_system -f
+	rm *.mp4 ./tmp -rf
