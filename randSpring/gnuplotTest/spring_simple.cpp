@@ -2,6 +2,10 @@
 // Simple simulation of a mass on a spring. Print out the results for
 // gnuplot to show the results.
 //
+// Simulate using a simple forward Euler integrator:
+// x_{i+1} = x_i + dt*v_i
+// v_{i+1} = v_i + dt*(-k/m)*x_i
+//
 
 #include <iostream>
 #include <fstream>
@@ -25,7 +29,7 @@ void simulation(std::ofstream& fout, double m, double k, double x_0, double x_do
     // Simulation
 
     for (int i = 1; i < steps; i++) {
-        x_dot[i] = x_dot[i - 1] + dt*(-(k/m)*x[i - 1]);
+        x_dot[i] = x_dot[i - 1] + dt*(-k/m)*x[i - 1];
         x[i] = x[i - 1] + dt*x_dot[i - 1];
 
         energy[i] = 0.5*m*x_dot[i]*x_dot[i] + 0.5*k*x[i]*x[i];
