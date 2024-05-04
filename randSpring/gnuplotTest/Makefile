@@ -1,18 +1,18 @@
-graph_spring_hamiltonian: spring_hamiltonian
-	./spring_hamiltonian
+graph_symplectic_spring: symplectic_spring
+	./symplectic_spring
 
-spring_hamiltonian:
-	g++ spring_hamiltonian.cpp -o spring_hamiltonian -lboost_iostreams -lboost_system -lboost_filesystem
+symplectic_spring:
+	g++ symplectic_spring.cpp -o symplectic_spring -lboost_iostreams -lboost_system -lboost_filesystem
 
-graph_spring_simple: spring_simple.dat
-	gnuplot -p spring_simple.p
+graph_euler_spring: euler_spring.dat
+	gnuplot -p euler_spring.p
 
-spring_simple.dat: spring_simple
-	./spring_simple
+euler_spring.dat: euler_spring
+	./euler_spring
 
-spring_simple:
-	g++ spring_simple.cpp -o spring_simple
+euler_spring:
+	g++ euler_spring.cpp -o euler_spring
 
 clean:
-	rm spring_simple spring_simple.dat -f
-	rm spring_hamiltonian -f
+	rm euler_spring euler_spring.dat -f
+	rm symplectic_spring -f

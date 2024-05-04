@@ -50,7 +50,7 @@ void simulation(std::ofstream& fout, double m, double k, double x_0, double x_do
 }
 
 int main() {
-    std::ofstream fout("spring_simple.dat");
+    std::ofstream fout("euler_spring.dat");
     simulation(fout, 1.0, 1.0, 1.0, 0.0, 0.0, 10.0, 1000);
     simulation(fout, 1.0, 1.0, 1.0, 0.0, 0.0, 100.0, 1000);
     fout.close();
