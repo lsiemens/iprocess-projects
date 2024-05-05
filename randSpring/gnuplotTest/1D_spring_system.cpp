@@ -12,7 +12,7 @@
 //
 // In this 1d system all masses have mass m, except for the first and
 // last which are infinite. All of the masses are connected to their
-// neighbor on each side with a spring with spring constant k. so
+// neighbour on each side with a spring with spring constant k. so
 //
 //     ┌─         ─┐
 //     │ ∞ 0 0 . . │
@@ -62,6 +62,14 @@
 // x_dot_{i+1} = x_dot_i + dt*A*x_i
 // x_{i+1} = x_i + dt*x_dot_i
 //
+// The distribution of frequencies in the system is found by analyzing the
+// matricies. Using LAPACK to calculate the eigenvalues of the matrix
+// A, ie -M^-1*K, the eigenvalues are all negative real numbers. This
+// implies that solutions to the equations of motion are sinusoidal. The
+// possible frequencies are given by the square root of the absolute value
+// of the eigenvalues of the matrix A. Making a histogram of these
+// frequencies then gives the distribution of frequencies of this system.
+//
 
 #include <stdexcept>
 #include <filesystem>
@@ -80,9 +88,37 @@ std::vector<double> multMatrix(std::vector<std::vector<double>> matrixM, std::ve
 double multMatrix(std::vector<double> vectorV, std::vector<double> vectorW);
 std::vector<double> multMatrix(std::vector<double> vectorV, double scalarS);
 std::vector<double> addMatrix(std::vector<double> vectorV, std::vector<double> vectorW);
+void plotHistogram(std::vector<double> vectorV, int bins);
 void simulation(std::string fname, double m, double k, std::vector<double>& x_0, std::vector<double>& x_dot_0, double t_min, double t_max, int steps, int verbose=0);
-void animation(std::string fname, std::vector<double> t, std::vector<std::vector<double>> x, std::vector<double> energy);
+void animation(std::string fname, std::vector<double> t, std::vector<std::vector<double>> x, std::vector<double> energy, int stride=1);
 void renderFrame(std::string fname, double t, std::vector<double> x, double energy);
+
+// Use dgeev_ from LAPACK
+extern "C" {
+    // dgeev_ stands for Double GEneral matrix EigenValue. It solves for
+    // the eigenvalues of an arbitrary matrix of doubles.
+
+    // char (in): JOBVL
+    // char (in): JOBVR
+
+    // int            (in): N
+    // double[][] (in/out): A
+    // int            (in): LDA
+
+    // double[] (out): WR
+    // double[] (out): WI
+
+    // double[][] (out): VL
+    // int         (in): LDVL
+    // double[][] (out): VR
+    // int         (in): LDVR
+
+    // double[] (out): WORK
+    // int       (in): LWORK
+
+    // int (out): INFO
+    extern int dgeev_(char*, char*, int*, double*, int*, double*, double*, double*, int*, double*, int*, double*, int*, int*);
+}
 
 // Linear algebra functions and utilities
 void printMatrix(std::string msg, std::vector<double> vectorV) {
@@ -114,7 +150,7 @@ std::vector<double> multMatrix(std::vector<std::vector<double>> matrixM, std::ve
     int sizeMn = matrixM.size(), sizeMm = matrixM[0].size(), sizeVn = vectorV.size();
     // Sanity check
     if (sizeMm != sizeVn) {
-        throw std::invalid_argument(std::to_string(sizeMn) + "x" + std::to_string(sizeMm) + " matrix can not be multiplied with a " + std::to_string(sizeVn) + " dimentional vector!");
+        throw std::invalid_argument(std::to_string(sizeMn) + "x" + std::to_string(sizeMm) + " matrix can not be multiplied with a " + std::to_string(sizeVn) + " dimensional vector!");
     }
 
     std::vector<double> result(sizeMn);
@@ -129,7 +165,7 @@ double multMatrix(std::vector<double> vectorV, std::vector<double> vectorW) {
     int sizeVn = vectorV.size(), sizeWn = vectorW.size();
     // Sanity check
     if (sizeVn != sizeWn) {
-        throw std::invalid_argument("Can not take the dot product of a " + std::to_string(sizeVn) + " dimentional vector with a " + std::to_string(sizeWn) + " dimentional vector!");
+        throw std::invalid_argument("Can not take the dot product of a " + std::to_string(sizeVn) + " dimensional vector with a " + std::to_string(sizeWn) + " dimensional vector!");
     }
 
     double result = 0;
@@ -154,7 +190,7 @@ std::vector<double> addMatrix(std::vector<double> vectorV, std::vector<double> v
     int sizeVn = vectorV.size(), sizeWn = vectorW.size();
     // Sanity check
     if (sizeVn != sizeWn) {
-        throw std::invalid_argument("Can not add a " + std::to_string(sizeVn) + " dimentional vector with a " + std::to_string(sizeWn) + " dimentional vector!");
+        throw std::invalid_argument("Can not add a " + std::to_string(sizeVn) + " dimensional vector with a " + std::to_string(sizeWn) + " dimensional vector!");
     }
 
     std::vector<double> result(sizeVn);
@@ -162,6 +198,143 @@ std::vector<double> addMatrix(std::vector<double> vectorV, std::vector<double> v
         result[i] = vectorV[i] + vectorW[i];
     }
     return result;
+}
+
+// Eigen Analysis
+void eigenvalues(std::vector<std::vector<double>> matrixA) {
+    int sizeMn = matrixA.size(), sizeMm = matrixA[0].size();
+    // Sanity check
+    if (sizeMn != sizeMm) {
+        throw std::invalid_argument("The " + std::to_string(sizeMn) + "x" + std::to_string(sizeMm) + " matrix is not square. Cannot find the eigenvalues!");
+    }
+
+    // Convert to a contiguous array
+    double data[sizeMn*sizeMn];
+    for (int i = 0; i < sizeMn; i++) {
+        std::memcpy(data + i*sizeMn, &matrixA[i][0], sizeMn*sizeof(double));
+    }
+
+    // Setup parameters for DGEEV
+    char Nchar='N';
+    std::vector<double> eigReal(sizeMn, 0);
+    std::vector<double> eigImag(sizeMn, 0);
+    int one=1;
+    int lwork=3*sizeMn;
+    double* work=new double[lwork];
+    int info;
+
+    dgeev_(&Nchar, &Nchar, &sizeMn, data, &sizeMn, eigReal.data(), eigImag.data(), nullptr, &one, nullptr, &one, work, &lwork, &info);
+
+    if (info != 0) {
+        std::cout << "DGEEV: Failed with error code -> " << info << std::endl;
+    }
+
+    //Check eigenvalues
+    //the eigenvalues should be real negative numbers.
+    for (double vi: eigImag) {
+        if (vi != 0) {
+            throw std::invalid_argument("Error: Complex eigenvalue found in system matrix! All eigenvalues should be real negative numbers.");
+        }
+    }
+
+    for (double vr: eigReal) {
+        if (vr > 0) {
+            throw std::invalid_argument("Error: Positive eigenvalue found in system matrix! All eigenvalues should be real negative numbers.");
+        }
+    }
+
+    //Frequency Distribution
+    std::vector<double> frequency(sizeMn, 0);
+    for (int i = 0; i < sizeMn; i++) {
+        frequency[i] = std::sqrt(std::abs(eigReal[i]));
+    }
+    plotHistogram(frequency, std::max(10, sizeMn/10));
+    plotHistogram(frequency, (int)std::sqrt(sizeMn));
+}
+
+void plotHistogram(std::vector<double> vectorV, int bins) {
+    int sizeVn = vectorV.size();
+    std::sort(vectorV.begin(), vectorV.end());
+
+    //Find bin edges
+    double minV = vectorV[0], maxV = vectorV.back();
+    double dV = (maxV - minV)/(bins);
+    std::vector<double> bin_edges(bins + 1, 0);
+    for (int i = 0; i < bins + 1; i++) {
+        bin_edges[i] = minV + i*dV;
+    }
+
+    //Count elements
+    std::vector<double> counts(bins, 0);
+    double binMin, binMax;
+
+    int root = -1;
+    int oldPivot = root;
+    int pivot = (sizeVn - root)/2 + root;
+
+    for (int i = 0; i < bins; i++) {
+        binMin = bin_edges[i];
+        binMax = bin_edges[i + 1];
+
+        int loop_fallback = 0;
+        while (loop_fallback < 2*sizeVn) {
+            //Check if pivot straddles the interval
+            if (((binMax < vectorV[pivot + 1]) || (pivot == sizeVn)) && ((vectorV[pivot] <= binMax) || (pivot == -1))) {
+                break;
+            } else if (((vectorV[pivot + 1] <= binMax) || (pivot == sizeVn)) && ((vectorV[pivot] <= binMax) || (pivot == -1))) {
+                oldPivot = pivot;
+                pivot = (sizeVn - pivot)/2 + pivot;
+            } else if (((binMax < vectorV[pivot + 1]) || (pivot == sizeVn)) && ((binMax < vectorV[pivot]) || (pivot == -1))) {
+                pivot = (pivot - oldPivot)/2 + oldPivot;
+            }
+
+            //Check if pivot is maxed out
+            if ((pivot == oldPivot) && (pivot == sizeVn - 1)) {
+                break;
+            }
+            loop_fallback++;
+        }
+
+        if (loop_fallback > sizeVn) {
+            throw std::invalid_argument("Histogram: maximum loop count exceeded!");
+        }
+        counts[i] = pivot - root;
+        root = pivot;
+        oldPivot = root;
+        pivot = (sizeVn - root)/2 + root;
+    }
+
+    //Define histogram curve
+    double yMin = 0, yMax = *max_element(counts.begin(), counts.end());
+    double xMin = bin_edges.front(), xMax = bin_edges.back();
+    double graphMargin = 0.1;
+
+    double xMargin = graphMargin*(xMax - xMin)/2;
+    double yMargin = graphMargin*(yMax - yMin)/2;
+
+    std::vector<double> xValues(2*bins + 4, 0);
+    std::vector<double> yValues(2*bins + 4, 0);
+
+    xValues[0] = xMin - xMargin;
+    xValues[1] = xMin;
+    xValues[2*bins + 2] = xMax;
+    xValues[2*bins + 3] = xMax + xMargin;
+    for (int i = 0; i < bins; i++) {
+        xValues[2*i + 2] = bin_edges[i];
+        xValues[2*i + 3] = bin_edges[i + 1];
+        yValues[2*i + 2] = counts[i];
+        yValues[2*i + 3] = counts[i];
+    }
+
+    //Graph the histogram using Gnuplot
+    Gnuplot gp;
+    gp << "set title 'Frequency Distribution'" << std::endl;
+    gp << "set xlabel 'frequency'" << std::endl;
+    gp << "set ylabel 'counts'" << std::endl;
+    gp << "set xrange [" << xMin - xMargin << ":" << xMax + xMargin << "]" << std::endl;
+    gp << "set yrange [" << yMin - yMargin << ":" << yMax + yMargin << "]" << std::endl;
+    gp << "plot" << gp.file1d(boost::make_tuple(xValues, yValues)) << " with lines notitle" << std::endl;
+    return;
 }
 
 // Simulation
@@ -173,7 +346,7 @@ void simulation(std::string fname, double m, double k, std::vector<double>& x_0,
         throw std::invalid_argument("Vectors x_0 and x_dot_0 must have the same length!");
     }
 
-    // Initalize Dynamic Arrays
+    // Initialize Dynamic Arrays
     double dt = (t_max - t_min)/(steps - 1);
 
     std::vector<double> t(steps);
@@ -186,7 +359,7 @@ void simulation(std::string fname, double m, double k, std::vector<double>& x_0,
     std::vector<double> energy(steps, 0.0);
     energy[0] = 0.5*m*multMatrix(x_dot[0], x_dot[0]) + 0.5*k*multMatrix(x[0], x[0]);
 
-    // Initalize System Configuration Array
+    // Initialize System Configuration Array
     std::vector<std::vector<double>> matrixA(num_mass, std::vector<double>(num_mass));
     for (int i = 1; i < num_mass - 1; i++) {
         matrixA[i][i - 1] = k/m;
@@ -195,7 +368,7 @@ void simulation(std::string fname, double m, double k, std::vector<double>& x_0,
     }
 
     // DEBUG
-    printMatrix("A:", matrixA);
+    eigenvalues(matrixA);
 
     // Simulation
     for (int i = 1; i < steps; i++) {
@@ -219,27 +392,27 @@ void simulation(std::string fname, double m, double k, std::vector<double>& x_0,
     gp << "set title 'Energy Evolution'" << std::endl;
     gp << "plot" << gp.file1d(boost::make_tuple(t, energy)) << "with lines title 'energy'" << std::endl;
 
-    animation(fname, t, x, energy);
+    animation(fname, t, x, energy, 10);
     return;
 }
 
-void animation(std::string fname, std::vector<double> t, std::vector<std::vector<double>> x, std::vector<double> energy) {
+void animation(std::string fname, std::vector<double> t, std::vector<std::vector<double>> x, std::vector<double> energy, int stride) {
     using namespace std::filesystem;
 
     std::string tmp_dir = "tmp";
 
-    // Creat temp directory if it does not exist
+    // Create temp directory if it does not exist
     if (!exists(tmp_dir)) {
         create_directory(tmp_dir);
     }
 
     int width = std::to_string(t.size() - 1).size(); // get fix with for index
-    for (int i = 0; i < t.size(); i++) {
-        std::string frame_name = std::to_string(i);
+    for (int i = 0; stride*i < t.size(); i++) {
+        std::string frame_name = std::to_string(stride*i);
         frame_name = fname + "_" + std::string(width - frame_name.size(), '0') + frame_name + ".png";
 
-        renderFrame(tmp_dir + "/" + frame_name, t[i], x[i], energy[i]);
-        std::cout << "\rRender Frames: " << i << "/" << t.size();
+        renderFrame(tmp_dir + "/" + frame_name, t[stride*i], x[stride*i], energy[stride*i]);
+        std::cout << "\rRender Frames: " << stride*i << "/" << t.size();
         std::cout.flush();
     }
 }
@@ -254,28 +427,24 @@ void renderFrame(std::string fname, double t, std::vector<double> x, double ener
     gp << "set yrange [-1:1]" << std::endl;
     gp << "set xrange [" << x[0] << ":" << x[x.size() - 1] <<"]" << std::endl;
     gp << "set xlabel 'Position x'" << std::endl;
-    gp << "plot" << gp.file1d(boost::make_tuple(x, std::vector<double>(x.size(), 0))) << " with points pointtype 5 title 'Spring System',\\" << std::endl;
+    gp << "plot" << gp.file1d(boost::make_tuple(x, std::vector<double>(x.size(), 0))) << " with points pointtype 4 title 'Spring System',\\" << std::endl;
     gp <<           gp.file1d(boost::make_tuple(x, std::vector<double>(x.size(), 0))) << " with lines dashtype '--' notitle" << std::endl;
     return;
 }
 
 int main() {
     // Graph with Gnuplot
-    int num_mass = 25;
+    int num_mass = 50;
 
-    // Initalize inital values
+    // Initialize initial values
     std::vector<double> x_0(num_mass);
     for (int i = 0; i < num_mass; i++) {
         x_0[i] = 1.0*i;
     }
     std::vector<double> x_dot_0(num_mass, 0.0);
 
-    x_dot_0[1] = 3.0;
+    x_dot_0[1] = 1;
 
-    // DEBUG
-    printMatrix("x_0:", x_0);
-    printMatrix("x_dot_0:", x_dot_0);
-
-    simulation("1D_spring_system", 1.0, 1.0, x_0, x_dot_0, 0.0, 100.0, 1000);
+    simulation("1D_spring_system", 1.0, 1.0, x_0, x_dot_0, 0.0, 500.0, 10000);
     return 0;
 }

@@ -6,7 +6,7 @@ graph_1D_spring_system: 1D_spring.mp4
 	ffmpeg -pattern_type glob -i "./tmp/*.png" 1D_spring.mp4
 
 1D_spring_system:
-	g++ 1D_spring_system.cpp -o 1D_spring_system -lboost_iostreams -lboost_system -lboost_filesystem
+	g++ 1D_spring_system.cpp -o 1D_spring_system -lboost_iostreams -lboost_system -lboost_filesystem -llapack
 
 graph_symplectic_spring: symplectic_spring
 	./symplectic_spring
