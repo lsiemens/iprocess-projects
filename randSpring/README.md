@@ -59,6 +59,34 @@ $$m_k \left( \ddot{\vec{x_0}}_k + \epsilon \ddot{\vec{y}}_k \right) - \sum_{i} K
 
 The dynamical equation for the perturbation of the system is,
 
-$$m_k \ddot{\vec{y}}_k - \sum_{i} K_{ik} \left( \vec{y}_i - \vec{y}_k \right) = 0$$
+$$m_k \ddot{\vec{y}}_k - \sum_i K_{ik} \left( \vec{y}_i - \vec{y}_k \right) = 0$$
 
-So the perturbations from equilibrium, i.e. vibrations, are governed by a simple linear matrix equation.
+So the perturbations from equilibrium, i.e. vibrations, are governed by a simple linear matrix equation. Also, note that full equations of motion in terms of $\vec{x}_i$ has the same form as this equation in the case where $L_{ij} = 0$. The equations of motion are the same for as spring system where each spring has a natural length of zero and the vibrations of an arbitrary spring system.
+
+## Vibration Solution
+To solve the equations of motion for vibrations in an arbitrary spring system, lets translate the equation from being expressed in terms of indicies to being expressed as a matrix equation. The sum $\sum_i K_{ik} \left( \vec{y}_i - \vec{y}_k \right)$ can not be directly interpreted as a matrix equation in terms of $K$, but it can be rewritten as $\sum_{i} K_{ik} \vec{y}_i - \left( \sum_i K_{ik} \right) \vec{y}_k$. These two terms can be identified as the diagonal and off diagonal components of a matrix. Denote this matrix as $K'$ with the elements,
+
+$$K'_{ij} =
+\begin{cases}
+\sum_k K_{ik} & i = j \\
+-K_{ij} & i \neq j
+\end{cases}$$
+
+Also, define the vector $\vec{Y}$ such its elements are the vectors $\vec{y}_i$ and the diagonal matrix $M$, where the elements on the diagonal are $m_i$. Then the vibrational equation of motion can be expressed as the matrix equation,
+
+$$M \ddot{\vec{Y}} + K' \vec{Y} = 0$$
+
+Finaly, rearanging terms puts the equation in a form analogus to the equation $a = -\frac{k}{m}x$, for a simple mass on a spring,
+
+$$\ddot{\vec{Y}} = -M^{-1} K' \vec{Y}$$
+
+The matrix $M^{-1} K'$ is symmetric, so it is diagonalizable. There are two matrices $\pm \Omega$ such that ${\Omega}^2 = M^{-1} K'$, which are trivial compute when in diagonal form. The solutions to the vibrational equation of motion are given by $\vec{Y}(t) = e^{\pm i \Omega t}\vec{A}$. The general solution is then,
+
+$$\vec{Y}(t) = e^{i \Omega t} \vec{A} + e^{-i \Omega t} \vec{B}$$
+
+Restricting to real solutions and using initial conditions,
+
+$$\vec{Y}(t) = \frac{e^{i \Omega t} + e^{-i \Omega t}}{2} \vec{Y}_0 + \frac{e^{i \Omega t} - e^{-i \Omega t}}{2i} \Omega^{-1} \dot{\vec{Y}}_0 = \cos(\Omega t) \vec{Y}_0 + \Omega^{-1} \sin(\Omega t) \dot{\vec{Y}}_0$$
+
+where $\vec{Y}_0 = \vec{Y}(0)$ and $\dot{\vec{Y}}_0 = \dot{\vec{Y}}(0)$.
+
