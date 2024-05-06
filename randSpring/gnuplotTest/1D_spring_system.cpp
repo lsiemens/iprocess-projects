@@ -70,6 +70,19 @@
 // of the eigenvalues of the matrix A. Making a histogram of these
 // frequencies then gives the distribution of frequencies of this system.
 //
+// the power spectrum for the system is found by using the Fourier transform
+// of the x(t) of the masses. Using FFTW3 the power spectral density for
+// the position of each (finite mass) particle is calculated, the average
+// spectrum is taken to be the spectrum for the system. If the system is
+// perturbed from equilibrium by kicking a single mass and allowed to evolve
+// for much longer than the signal crossing time of the system, then the
+// power spectrum a general trend of decreasing power for increasing
+// frequencies. Note, that the density of spectral lines (if resolved)
+// is increasing with increasing frequency up until a cutoff frequency
+// F. This trend of the density of allowed frequencies, and maximum
+// frequency F are both features shared with the histogram of the frequencies
+// found by analyzing the eigenvalues of the system.
+//
 
 #include <stdexcept>
 #include <filesystem>
@@ -77,8 +90,12 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
-#include <boost/tuple/tuple.hpp>
 
+#include <complex>
+#include <fftw3.h>
+
+#include <boost/tuple/tuple.hpp>
+#include <boost/format.hpp>
 #include "gnuplot-iostream.h"
 
 // Function definitions
@@ -88,10 +105,16 @@ std::vector<double> multMatrix(std::vector<std::vector<double>> matrixM, std::ve
 double multMatrix(std::vector<double> vectorV, std::vector<double> vectorW);
 std::vector<double> multMatrix(std::vector<double> vectorV, double scalarS);
 std::vector<double> addMatrix(std::vector<double> vectorV, std::vector<double> vectorW);
+
+void eigenvalues(std::vector<std::vector<double>> matrixA);
+void powerSpectrum(std::vector<double> t, std::vector<std::vector<double>> data);
+
+void showPlot(std::vector<double> t, std::vector<double> y, std::string title="", std::string xlabel="", std::string ylabel="", std::string graphlabel="", double xMin=0, double xMax=0, double yMin=0, double yMax=0);
 void plotHistogram(std::vector<double> vectorV, int bins);
-void simulation(std::string fname, double m, double k, std::vector<double>& x_0, std::vector<double>& x_dot_0, double t_min, double t_max, int steps, int verbose=0);
 void animation(std::string fname, std::vector<double> t, std::vector<std::vector<double>> x, std::vector<double> energy, int stride=1);
 void renderFrame(std::string fname, double t, std::vector<double> x, double energy);
+
+void simulation(std::string fname, double m, double k, std::vector<double>& x_0, std::vector<double>& x_dot_0, double tMax, int steps, int verbose=0);
 
 // Use dgeev_ from LAPACK
 extern "C" {
@@ -200,7 +223,7 @@ std::vector<double> addMatrix(std::vector<double> vectorV, std::vector<double> v
     return result;
 }
 
-// Eigen Analysis
+// Spectrum Analysis: Eigenvalues, Fourier
 void eigenvalues(std::vector<std::vector<double>> matrixA) {
     int sizeMn = matrixA.size(), sizeMm = matrixA[0].size();
     // Sanity check
@@ -246,10 +269,87 @@ void eigenvalues(std::vector<std::vector<double>> matrixA) {
     //Frequency Distribution
     std::vector<double> frequency(sizeMn, 0);
     for (int i = 0; i < sizeMn; i++) {
-        frequency[i] = std::sqrt(std::abs(eigReal[i]));
+        frequency[i] = std::sqrt(std::abs(eigReal[i]))/(2*M_PI);
     }
     plotHistogram(frequency, std::max(10, sizeMn/10));
     plotHistogram(frequency, (int)std::sqrt(sizeMn));
+}
+
+void powerSpectrum(std::vector<double> t, std::vector<std::vector<double>> data) {
+    int sizeN = t.size();
+    int numMass = data[0].size();
+
+    std::vector<double> f(sizeN, 0);
+    std::vector<double> powerDensity(sizeN, 0);
+
+    double dt = t[1] - t[0];
+
+    // Initialize f
+    for (int i = 0; i < sizeN; i++) {
+        f[i] = i/(sizeN*dt);
+    }
+
+    // Setup FFTW
+    fftw_complex *in, *out;
+    fftw_plan p;
+
+    in = (fftw_complex*) fftw_malloc(sizeof(fftw_complex)*sizeN);
+    out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex)*sizeN);
+
+    p = fftw_plan_dft_1d(sizeN, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
+
+    for (int k = 1; k < numMass - 1; k++) {
+        double meanValue = 0;
+        for (std::vector<double> values: data) {
+            meanValue += values[k];
+        }
+        meanValue /= sizeN;
+
+        for (int i = 0; i < sizeN; i++) {
+            in[i][0] = data[i][k] - meanValue; // Remove the DC offset
+            in[i][1] = 0;
+        }
+
+        fftw_execute(p); // Take the FFT of the contents pointed to by `in`
+
+        for (int i = 0; i < sizeN/2; i++) {
+            powerDensity[i] += (out[i][0]*out[i][0] + out[i][1]*out[i][1])/(sizeN*dt)/(numMass - 2);
+        }
+        std::cout << "\rFourier Transform: " << k << "/" << numMass - 2;
+        std::cout.flush();
+    }
+    std::cout << std::endl;
+
+    // Show Input data
+    showPlot(f, powerDensity, "Power Spectrum", "Frequency f", "Power Spectral Density");
+
+    fftw_destroy_plan(p);
+    fftw_free(in); fftw_free(out);
+}
+
+// Plotting and Graphing
+void showPlot(std::vector<double> t, std::vector<double> y, std::string title, std::string xlabel, std::string ylabel, std::string graphlabel, double xMin, double xMax, double yMin, double yMax) {
+    Gnuplot gp;
+    gp << "set title '" << title << "'" << std::endl;
+    gp << "set xlabel '" << xlabel << "'" << std::endl;
+    gp << "set ylabel '" << ylabel << "'" << std::endl;
+
+    if (xMin != xMax) {
+        gp << "set xrange [" << xMin << ":" << xMax << "]" << std::endl;
+    }
+
+    if (yMin != yMax) {
+        gp << "set yrange [" << yMin << ":" << yMax << "]" << std::endl;
+    }
+
+    if (graphlabel == "") {
+        graphlabel = "notitle";
+    } else {
+        graphlabel = "title '" + graphlabel + "'";
+    }
+
+    gp << "plot" << gp.file1d(boost::make_tuple(t, y)) << "with lines " << graphlabel << std::endl;
+    gp << "pause mouse close" << std::endl;
 }
 
 void plotHistogram(std::vector<double> vectorV, int bins) {
@@ -327,31 +427,61 @@ void plotHistogram(std::vector<double> vectorV, int bins) {
     }
 
     //Graph the histogram using Gnuplot
-    Gnuplot gp;
-    gp << "set title 'Frequency Distribution'" << std::endl;
-    gp << "set xlabel 'frequency'" << std::endl;
-    gp << "set ylabel 'counts'" << std::endl;
-    gp << "set xrange [" << xMin - xMargin << ":" << xMax + xMargin << "]" << std::endl;
-    gp << "set yrange [" << yMin - yMargin << ":" << yMax + yMargin << "]" << std::endl;
-    gp << "plot" << gp.file1d(boost::make_tuple(xValues, yValues)) << " with lines notitle" << std::endl;
+    showPlot(xValues, yValues, "Frequency Distribution", "Frequency f", "Counts", "", xMin - xMargin, xMax + xMargin, yMin - yMargin, yMax + yMargin);
     return;
 }
 
+void renderFrame(std::string fname, double t, std::vector<double> x, double energy) {
+    // Graph the springs using Gnuplot
+    Gnuplot gp;
+    gp << "set terminal png" << std::endl;
+    gp << "set output '" + fname + "'" << std::endl;
+    gp << boost::format("set title 'Spring Evolution: Time %.2f'") % t << std::endl;
+    gp << "set yrange [-1:1]" << std::endl;
+    gp << "set xrange [" << x[0] << ":" << x[x.size() - 1] <<"]" << std::endl;
+    gp << "set xlabel 'Position x'" << std::endl;
+    gp << "plot" << gp.file1d(boost::make_tuple(x, std::vector<double>(x.size(), 0))) << boost::format(" with points pointtype 4 title 'Spring System: Energy %.4e',\\") % energy << std::endl;
+    gp <<           gp.file1d(boost::make_tuple(x, std::vector<double>(x.size(), 0))) << " with lines dashtype '--' notitle" << std::endl;
+    return;
+}
+
+void animation(std::string fname, std::vector<double> t, std::vector<std::vector<double>> x, std::vector<double> energy, int stride) {
+    using namespace std::filesystem;
+
+    int sizeT = t.size();
+    std::string tmp_dir = "tmp";
+
+    // Create temp directory if it does not exist
+    if (!exists(tmp_dir)) {
+        create_directory(tmp_dir);
+    }
+
+    int width = std::to_string(sizeT - 1).size(); // get fix with for index
+    for (int i = 0; stride*i < sizeT; i++) {
+        std::string frame_name = std::to_string(stride*i);
+        frame_name = fname + "_" + std::string(width - frame_name.size(), '0') + frame_name + ".png";
+
+        renderFrame(tmp_dir + "/" + frame_name, t[stride*i], x[stride*i], energy[stride*i]);
+        std::cout << "\rRender Frames: " << stride*(i + 1) << "/" << sizeT;
+        std::cout.flush();
+    }
+    std::cout << std::endl;
+}
+
 // Simulation
-void simulation(std::string fname, double m, double k, std::vector<double>& x_0, std::vector<double>& x_dot_0, double t_min, double t_max, int steps, int verbose) {
+void simulation(std::string fname, double m, double k, std::vector<double>& x_0, std::vector<double>& x_dot_0, double tMax, int steps, int verbose) {
     // Sanity check
     int num_mass = x_0.size();
-    std::cout << "Number of particles: " << num_mass << std::endl;
     if (x_0.size() != x_dot_0.size()) {
         throw std::invalid_argument("Vectors x_0 and x_dot_0 must have the same length!");
     }
 
     // Initialize Dynamic Arrays
-    double dt = (t_max - t_min)/(steps - 1);
+    double dt = tMax/(steps - 1);
 
     std::vector<double> t(steps);
     for (int i = 0; i < steps; i++) {
-        t[i] = t_min + dt*i;
+        t[i] = dt*i;
     }
 
     std::vector<std::vector<double>> x(steps, x_0);
@@ -377,64 +507,22 @@ void simulation(std::string fname, double m, double k, std::vector<double>& x_0,
 
         energy[i] = 0.5*m*multMatrix(x_dot[i], x_dot[i]) + 0.5*k*multMatrix(x[i], x[i]);
 
-        if (verbose > 0) {
-            std::cout << "Step: " << i << std::endl << "t_i: " << t[i] << std::endl;
-            printMatrix("x_i:", x[i]);
-            printMatrix("x_dot_i:", x_dot[i]);
-            std::cout << "energy_i: " << energy[i] << std::endl << std::endl;
-        }
+        std::cout << "\rSimulation step: " << i << "/" << steps - 1;
+        std::cout.flush();
     }
+    std::cout << std::endl;
 
-    // Graph the energy using Gnuplot
-    Gnuplot gp;
-    gp << "set xlabel 'Time t'" << std::endl;
-    gp << "set ylabel 'Energy'" << std::endl;
-    gp << "set title 'Energy Evolution'" << std::endl;
-    gp << "plot" << gp.file1d(boost::make_tuple(t, energy)) << "with lines title 'energy'" << std::endl;
+    // Graph the power spectrum and the energy using Gnuplot
+    powerSpectrum(t, x);
+    showPlot(t, energy, "Energy Evolution", "Time t", "Energy", "energy");
 
     animation(fname, t, x, energy, 10);
     return;
 }
 
-void animation(std::string fname, std::vector<double> t, std::vector<std::vector<double>> x, std::vector<double> energy, int stride) {
-    using namespace std::filesystem;
-
-    std::string tmp_dir = "tmp";
-
-    // Create temp directory if it does not exist
-    if (!exists(tmp_dir)) {
-        create_directory(tmp_dir);
-    }
-
-    int width = std::to_string(t.size() - 1).size(); // get fix with for index
-    for (int i = 0; stride*i < t.size(); i++) {
-        std::string frame_name = std::to_string(stride*i);
-        frame_name = fname + "_" + std::string(width - frame_name.size(), '0') + frame_name + ".png";
-
-        renderFrame(tmp_dir + "/" + frame_name, t[stride*i], x[stride*i], energy[stride*i]);
-        std::cout << "\rRender Frames: " << stride*i << "/" << t.size();
-        std::cout.flush();
-    }
-}
-
-void renderFrame(std::string fname, double t, std::vector<double> x, double energy) {
-    // Graph the springs using Gnuplot
-    Gnuplot gp;
-    gp << "set terminal png" << std::endl;
-    gp << "set output '" + fname + "'" << std::endl;
-    gp << "set title 'Spring Evolution'" << std::endl;
-    gp << "set label 1 'Time t:" + std::to_string(t) + " Energy: " + std::to_string(energy) + "' at 0.5,0.5 offset 0,0" << std::endl;
-    gp << "set yrange [-1:1]" << std::endl;
-    gp << "set xrange [" << x[0] << ":" << x[x.size() - 1] <<"]" << std::endl;
-    gp << "set xlabel 'Position x'" << std::endl;
-    gp << "plot" << gp.file1d(boost::make_tuple(x, std::vector<double>(x.size(), 0))) << " with points pointtype 4 title 'Spring System',\\" << std::endl;
-    gp <<           gp.file1d(boost::make_tuple(x, std::vector<double>(x.size(), 0))) << " with lines dashtype '--' notitle" << std::endl;
-    return;
-}
-
 int main() {
-    // Graph with Gnuplot
-    int num_mass = 50;
+    int num_mass = 50, steps = 10000;
+    double m = 1.0, k = 1.0, tMax = 500.0;
 
     // Initialize initial values
     std::vector<double> x_0(num_mass);
@@ -443,8 +531,8 @@ int main() {
     }
     std::vector<double> x_dot_0(num_mass, 0.0);
 
-    x_dot_0[1] = 1;
+    x_dot_0[1] = 3;
 
-    simulation("1D_spring_system", 1.0, 1.0, x_0, x_dot_0, 0.0, 500.0, 10000);
+    simulation("1D_spring_system", m, k, x_0, x_dot_0, tMax, steps);
     return 0;
 }
