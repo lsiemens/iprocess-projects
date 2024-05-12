@@ -98,6 +98,8 @@
 #include <boost/format.hpp>
 #include "gnuplot-iostream.h"
 
+#include <lapacke.h>
+
 // Function definitions
 void printMatrix(std::string msg, std::vector<double> vectorV);
 void printMatrix(std::string msg, std::vector<std::vector<double>> matrixM);
@@ -115,33 +117,6 @@ void animation(std::string fname, std::vector<double> t, std::vector<std::vector
 void renderFrame(std::string fname, double t, std::vector<double> x, double energy);
 
 void simulation(std::string fname, double m, double k, std::vector<double>& x_0, std::vector<double>& x_dot_0, double tMax, int steps, int verbose=0);
-
-// Use dgeev_ from LAPACK
-extern "C" {
-    // dgeev_ stands for Double GEneral matrix EigenValue. It solves for
-    // the eigenvalues of an arbitrary matrix of doubles.
-
-    // char (in): JOBVL
-    // char (in): JOBVR
-
-    // int            (in): N
-    // double[][] (in/out): A
-    // int            (in): LDA
-
-    // double[] (out): WR
-    // double[] (out): WI
-
-    // double[][] (out): VL
-    // int         (in): LDVL
-    // double[][] (out): VR
-    // int         (in): LDVR
-
-    // double[] (out): WORK
-    // int       (in): LWORK
-
-    // int (out): INFO
-    extern int dgeev_(char*, char*, int*, double*, int*, double*, double*, double*, int*, double*, int*, double*, int*, int*);
-}
 
 // Linear algebra functions and utilities
 void printMatrix(std::string msg, std::vector<double> vectorV) {
@@ -238,15 +213,9 @@ void eigenvalues(std::vector<std::vector<double>> matrixA) {
     }
 
     // Setup parameters for DGEEV
-    char Nchar='N';
     std::vector<double> eigReal(sizeMn, 0);
     std::vector<double> eigImag(sizeMn, 0);
-    int one=1;
-    int lwork=3*sizeMn;
-    double* work=new double[lwork];
-    int info;
-
-    dgeev_(&Nchar, &Nchar, &sizeMn, data, &sizeMn, eigReal.data(), eigImag.data(), nullptr, &one, nullptr, &one, work, &lwork, &info);
+    int info = LAPACKE_dgeev(LAPACK_COL_MAJOR, 'N', 'N', sizeMn, data, sizeMn, eigReal.data(), eigImag.data(), NULL, 1, NULL, 1);
 
     if (info != 0) {
         std::cout << "DGEEV: Failed with error code -> " << info << std::endl;
