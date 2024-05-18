@@ -2,6 +2,7 @@
 #define LINALG_H
 
 #include <string>
+#include <vector>
 
 class Matrix; // forward decleration for decleration of friend function
 
@@ -12,11 +13,13 @@ private:
 public:
     int n;
 
+    Vector();
     Vector(int, double);
 
     double& operator[](int);
 
     std::string to_string();
+    std::vector<double> to_vector();
 
     double dot(Vector other);
 
@@ -29,6 +32,8 @@ private:
 
 public:
     int n, m;
+    Matrix();
+    Matrix(int, double);
     Matrix(int, int, double);
 
     double* operator[](int);

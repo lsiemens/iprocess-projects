@@ -10,6 +10,11 @@
 #include <lapacke.h>
 
 // ------------ Vector Methods ------------
+Vector::Vector() {
+    n = 0;
+    elements = {};
+}
+
 Vector::Vector(int size, double value=0) {
     n = size;
     elements = new double[size];
@@ -34,11 +39,30 @@ std::string Vector::to_string() {
     return result;
 }
 
+std::vector<double> Vector::to_vector() {
+    return std::vector<double>(elements, elements + n);
+}
+
 double Vector::dot(Vector other) {
     return cblas_ddot(n, elements, 1, other.elements, 1);
 }
 
 // ------------ Matrix Methods ------------
+Matrix::Matrix() {
+    n = 0;
+    m = 0;
+    elements = {};
+}
+
+Matrix::Matrix(int size_n, double value = 0) {
+    n = size_n;
+    m = size_n;
+    elements = new double[n*m];
+    for (int i = 0; i < n*m; i++) {
+        elements[i] = value;
+    }
+}
+
 Matrix::Matrix(int size_n, int size_m, double value = 0) {
     n = size_n;
     m = size_m;
