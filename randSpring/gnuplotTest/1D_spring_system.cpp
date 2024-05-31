@@ -60,7 +60,7 @@
 //
 // Simulate using the semi-implicit Euler integrator:
 // x_dot_{i+1} = x_dot_i + dt*A*x_i
-// x_{i+1} = x_i + dt*x_dot_i
+// x_{i+1} = x_i + dt*x_dot_{i+1}
 //
 // The distribution of frequencies in the system is found by analyzing the
 // matricies. Using LAPACK to calculate the eigenvalues of the matrix
