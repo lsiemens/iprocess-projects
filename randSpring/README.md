@@ -64,7 +64,7 @@ $$m_k \ddot{\vec{y}}_k - \sum_i K_{ik} \left( \vec{y}_i - \vec{y}_k \right) = 0$
 So the perturbations from equilibrium, i.e. vibrations, are governed by a simple linear matrix equation. Also, note that full equations of motion in terms of $\vec{x}_i$ has the same form as this equation in the case where $L_{ij} = 0$. The equations of motion are the same for as spring system where each spring has a natural length of zero and the vibrations of an arbitrary spring system.
 
 ## Vibration Solution
-To solve the equations of motion for vibrations in an arbitrary spring system, lets translate the equation from being expressed in terms of indicies to being expressed as a matrix equation. The sum $\sum_i K_{ik} \left( \vec{y}_i - \vec{y}_k \right)$ can not be directly interpreted as a matrix equation in terms of $K$, but it can be rewritten as $\sum_{i} K_{ik} \vec{y}_i - \left( \sum_i K_{ik} \right) \vec{y}_k$. These two terms can be identified as the diagonal and off diagonal components of a matrix. Denote this matrix as $K'$ with the elements,
+To solve the equations of motion for vibrations in an arbitrary spring system, lets translate the equation from being expressed in terms of indicies to being expressed as a matrix equation. The sum $\sum_i K_{ik} \left( \vec{y}_i - \vec{y}_k \right)$ can not be directly interpreted as a matrix equation in terms of $K$, but it can be rewritten as $\sum_{i} K_{ik} \vec{y}_i - \left( \sum_i K_{ik} \right) \vec{y}_k$. These two terms can be identified as the diagonal and off diagonal components of a matrix. Denote this matrix as $K'$ with the elements (Note this is like a generalization or weighted version of the graph Laplacian),
 
 $$K'_{ij} =
 \begin{cases}

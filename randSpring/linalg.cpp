@@ -4,6 +4,7 @@
 #include "linalg.h"
 
 #include <iostream>
+#include <stdexcept>
 #include <string>
 
 #include <cblas.h>
@@ -24,6 +25,9 @@ Vector::Vector(int size, double value=0) {
 }
 
 double& Vector::operator[](int index) {
+    if (n == 0) {
+        throw std::runtime_error("ERROR: cannot acces zero length Vector!");
+    }
     return elements[index];
 }
 
@@ -73,6 +77,9 @@ Matrix::Matrix(int size_n, int size_m, double value = 0) {
 }
 
 double* Matrix::operator[](int index) {
+    if ((n == 0) || (m == 0)) {
+        throw std::runtime_error("ERROR: cannot acces zero size Matrix!");
+    }
     return (elements + m*index);
 }
 

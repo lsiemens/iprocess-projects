@@ -3,6 +3,9 @@
 
 #include "linalg.h"
 
-void graph(Vector vecX_x, Vector vecX_y, Matrix matK);
+#include <string>
+
+void graph_spring_system(Vector vecX_x, Vector vecX_y, Matrix matK, std::string fname = "");
+void graph_time_evolution(Vector vecT, Vector vecX);
 
 #endif

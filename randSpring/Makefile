@@ -1,6 +1,9 @@
 LAFLAG=-llapacke -llapack -lblas
 GFLAG=-lboost_iostreams -lboost_system -lboost_filesystem
 
+play: nonlinear.mp4
+	open nonlinear.mp4
+
 run: nonlinear_spring_system
 	./nonlinear_spring_system
 
@@ -9,6 +12,10 @@ Test_linalg: testLinalg
 
 Test_graphSystem: testGraphSystem
 	./testGraphSystem
+
+nonlinear.mp4: nonlinear_spring_system
+	./nonlinear_spring_system
+	ffmpeg -pattern_type glob -i "./tmp/*.png" nonlinear.mp4
 
 nonlinear_spring_system: linalg.o graph_system.o
 	g++ nonlinear_spring_system.cpp linalg.o graph_system.o -o nonlinear_spring_system $(LAFLAG) $(GFLAG)
@@ -30,3 +37,4 @@ clean:
 	rm graph_system.o testGraphSystem -f
 	rm linalg.o testLinalg -f
 	rm nonlinear_spring_system -f
+	rm *.mp4 ./tmp -rf
