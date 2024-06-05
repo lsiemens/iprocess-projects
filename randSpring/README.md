@@ -90,3 +90,82 @@ $$\vec{Y}(t) = \frac{e^{i \Omega t} + e^{-i \Omega t}}{2} \vec{Y}_0 + \frac{e^{i
 
 where $\vec{Y}_0 = \vec{Y}(0)$ and $\dot{\vec{Y}}_0 = \dot{\vec{Y}}(0)$.
 
+## Error and stability
+So far I have made a 1D linear simulation of the general problem, a 2D nonlinear simulation and I have not yet written the 2D linear simulation of vibrational solutions. In these two programs I have used forward Euler integration and semi-implicit Euler integration, where the nonlinear code is restricted to only using the forward Euler integrator. I started by looking into stability analysis of the linear system, but since this is a linear system the dynamics of the error is equivelent to that of the system as a whole. Since the matrix defining the linear system has purely imaginary eigenvalues, with some eigenvalues of zero, then $||1 + \Delta t \lambda|| \geq 1$ while the region of stability is $||1 + \Delta t \lambda|| \leq 1$. Since this system does not include any dampening to bring it into the region of stability, it can only be stable in the mathematical limit when $\Delta t \to 0$, the integrator is unstable for any non-zero $\Delta t$.
+
+### Target System and Analytic Solution
+Before we continue, let's define a general system to consider. Neglecting some of the spesific symmetry constraints for the spring systems that we have been considering leaves, a vector in $\mathbb{R}^n$ of posistions $\vec{x}$ and velocities $\vec{v}$ subject to the system of equations,
+
+$$\begin{align}
+\frac{d}{dt}\vec{x} & = \vec{v} \\
+\frac{d}{dt}\vec{v} & = A\vec{x}
+\end{align}$$
+
+This can be represented as a linear system in $\mathbb{R^{2n}}$ space. Define a vector $\vec{w}$ where the first $n$ elements are $\vec{x}$ and the last $n$ elements are $\vec{v}$ and a matrix $B$ to reproduce the linear system. The resulting system is,
+
+$$\vec{w} =
+\begin{bmatrix}
+\vec{x} \\
+\vec{v}
+\end{bmatrix}$$
+$$B = 
+\begin{bmatrix}
+0 & I \\
+A & 0
+\end{bmatrix}
+$$
+$$\frac{d}{dt}\vec{w} = B\vec{w}$$
+
+The solution to this system, for some inital values $\vec{w}_0$, is the vector $\vec{w}_f$ given by the matrix exponential,
+
+$$\vec{w}_f = e^{tB}\vec{w}_0 = \left[ \sum_{k=0}^\infty \frac{(tB)^k}{k!} \right] \vec{w}_0$$
+
+Provided that $B$ is diagonalizable, the system reduces to $2n$ decoupled equations. Lableing the eigenvalues and eigenvectors as $\lambda_k$ and $\vec{w}_{\lambda_k}$, with $\vec{w}_0 = \sum_{k=1}^{2n} a_k \vec{w}_{\lambda_k}$ and $|\vec{w}_{\lambda_k}| = 1$, then the solution to the system is
+
+$$\vec{w}_f = \sum_{k=1}^{2n} a_k e^{t\lambda_k} \vec{w}_{\lambda_k}$$
+
+### Forward Euler
+Discritize the system such that there are $N$ intemederiary steps from $\vec{w}_0$ at $t_0=0$ to $\vec{w}_f$ at $t_f=t$. The intermediary vectors are labeld as $\vec{w}_i$ at $t_i = i \Delta t$, where $\Delta t = \frac{t}{N}$. Using a forward Euler integrator the system becomes,
+
+$$\vec{w}_{i + 1} = \vec{w}_i + \Delta t B \vec{w}_i = \left( I + \Delta t B \right) \vec{w}_i$$
+
+Colapsing this recursive equation gives the approximate solution for $\vec{w}_f$,
+
+$$\vec{w}_N = \left( I + \Delta t B \right)^{N} \vec{w}_0 = \left( I + \frac{tB}{N} \right)^{N} \vec{w}_0$$
+
+Note, in the limit where $N \to \infty$ this reproduces the analytic solution,
+
+$$\begin{align}
+\lim_{N \to \infty} \left( I + \frac{tB}{N} \right)^{N} \vec{w}_0 & = \lim_{N \to \infty} \sum_{k = 0}^N \binom{N}{k}I^{N - k}\left( \frac{tB}{N} \right)^k \vec{w}_0 \\
+& = \lim_{N \to \infty} \sum_{k = 0}^N \frac{N!}{(N - k)!N^k}\frac{(tB)^k}{k!} \vec{w}_0 \\
+& = \left[ \lim_{N \to \infty} I + tB + (1 - \frac{1}{N}) \frac{(tB)^2}{2!}+ (1 - \frac{1}{N})(1 - \frac{2}{N}) \frac{(tB)^3}{3!} + \cdots \right] \vec{w}_0 \\
+& = \sum_{k=0}^\infty \frac{(tB)^k}{k!} \vec{w}_0 \\
+& = e^{tB} \vec{w}_0
+\end{align}$$
+
+Define the error $\varepsilon_f$ as the difference between the discritized and the analytic solutions, so
+
+$$\varepsilon_f = \vec{w}_N - \vec{w}_f = \left(I + \Delta t B\right)^N \vec{w}_0 - e^{tB} \vec{w}_0 = \left[ \left( I + \Delta t B \right)^N - e^{tB} \right] \vec{w}_0$$
+
+Lets solve for this error as an asymptotic series of the number of intemediary steps $N$. Make the substitution $u = \frac{1}{N}$ and expand $\varepsilon_f$ about $u = 0$
+
+$$\begin{align}
+\varepsilon_f & = \left[ \left( I + \Delta t B \right)^N - e^{tB} \right] \vec{w}_0 \\
+& = \left[ \left( I + \frac{tB}{N} \right)^N - e^{tB} \right] \vec{w}_0 \\
+& = \left[ \left( I + utB \right)^{1/u} - e^{tB} \right] \vec{w}_0 \\
+& = \left[ e^{\frac{1}{u}\ln(I + utB}) - e^{tB} \right] \vec{w}_0 \\
+& = \left[ e^{\frac{1}{u}\left( utB - \frac{1}{2}(utB)^2 + \frac{1}{3}(utB)^3 + \mathcal{O}(u^4) \right)} - e^{tB} \right] \vec{w}_0 \\
+& = \left[ e^{tB - \frac{u}{2}(tB)^2 + \frac{u^2}{3}(tB)^3 + \mathcal{O}(u^3)} - e^{tB} \right] \vec{w}_0 \\
+& = \left[ e^{-\frac{u}{2}(tB)^2 + \frac{u^2}{3}(tB)^3 + \mathcal{O}(u^3)} - I \right] e^{tB} \vec{w}_0 \\
+& = \left[ I - \frac{u}{2}(tB)^2 + \frac{u^2}{3}(tB)^3 + \frac{u^2}{8}(tB)^4 + \mathcal{O}(u^3) - I \right] \vec{w}_f \\
+& = \left[ -\frac{(tB)^2}{2N} + \frac{(tB)^3}{24N^2}(8 + 3tB) + \mathcal{O}(1/N^3) \right] \vec{w}_f
+\end{align}$$
+
+Given the inital value is a unit eigenvector, $\vec{w}_0 = \vec{w}_{\lambda_k}$, then to first order the magnitude of the error will be,
+
+$$||\varepsilon_f|| = \frac{t^2 \left( \Re(\lambda_k)^2 + \Im(\lambda_k)^2 \right)}{2N} e^{t\Re(\lambda_k)}$$
+
+Applying this to the mass spring systems where $\lambda_k = \pm i 2 \pi f$ the number of steps needed keep the final relative error to $||\varepsilon_f||$ is,
+
+$$N = \frac{2\left( \pi tf \right)^2}{||\varepsilon_f||}$$
+
