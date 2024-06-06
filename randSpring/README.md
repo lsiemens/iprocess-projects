@@ -169,3 +169,56 @@ Applying this to the mass spring systems where $\lambda_k = \pm i 2 \pi f$ the n
 
 $$N = \frac{2\left( \pi tf \right)^2}{||\varepsilon_f||}$$
 
+### Semi-Implicit Euler
+The instability in the forward Euler integrator means that while reasonable results can be achived when the number of steps is high enough, as the simulated duration increases the size of the time steps must decrease otherwise the error would increase to the point of makeing the result meaningless. That is the forward Euler integrator does not scale well. The semi-implicit Euler integrator is a symplectec integrator and so interacts nicely with hameltonian systems like the 1D spring system. Being a sysmplectic integrator while the energy is not conserved it does tend to be bounded in a restricted range so even if some of the finer detials are not converged general properties of the physical system are maintained over long simulations.
+
+The system is discritized in the same way as for the previous method, but using the semi-implicit Euler integrator gives the slightly different system,
+
+$$\begin{align}
+\vec{x}_{i + 1} & = \vec{x}_i + \Delta t \vec{v}_{i + 1} \\
+\vec{v}_{i + 1} & = \vec{v}_i + \Delta t A\vec{x}_i
+\end{align}$$
+
+This semi-implicit system can by converted into an equivelent higher order integrator by flatening the recursion. This produces the system of equations,
+
+$$\begin{align}
+\vec{x}_{i + 1} & = \left( I + \Delta t^2 A \right) \vec{x}_i + \Delta t \vec{v}_i \\
+\vec{v}_{i + 1} & = \vec{v}_i + \Delta t A\vec{x}_i
+\end{align}$$
+
+This system can be described as a single $2n$ dimentinal linear system, in terms of the previous vectors $\vec{w}_i$ matrix $B$ and a new matrix $C$.
+
+$$C = 
+\begin{bmatrix}
+A & 0 \\
+0 & 0
+\end{bmatrix}
+$$
+$$\vec{w}_{i + 1} = \left( I + \Delta t B + \Delta t^2 C\right) \vec{w}_i$$
+
+First, to validate that this does solve the analytic problem when $\Delta t \to 0$. Colapse the recursive equations and solve for $\vec{w}_f$ as $N \to \infty$,
+
+$$\begin{align}
+\vec{w}_f & = \lim_{N \to \infty} \left( I + \Delta t B + \Delta t^2 C\right)^N \vec{w}_0 \\
+& = \lim_{N \to \infty} \sum_{k = 0}^N \binom{N}{k} I^{N - k} \left(\Delta t B + \Delta t^2 C \right)^k \vec{w}_0 \\
+& = \lim_{N \to \infty} \sum_{k = 0}^N \frac{N!}{(N - k)! N^k} \frac{t^k \left( B + \Delta t C \right)^k}{k!} \vec{w}_0 \\
+& = \lim_{N \to \infty} \left[I + t\left( B + \frac{t}{N}C \right) + \left( 1 - \frac{1}{N}\right) \frac{t^2\left( B + \frac{t}{N}C \right)^2}{2!} + \left( 1 - \frac{1}{N}\right)\left( 1 - \frac{2}{N}\right) \frac{t^3\left( B + \frac{t}{N}C \right)^3}{3!} + \cdots \right] \vec{w}_0 \\
+& = \sum_{k=0}^\infty \frac{(tB)^k}{k!} \vec{w}_0 \\
+& = e^{tB} \vec{w}_0
+\end{align}$$
+
+At first I was unsure how to solve this system, untill during some inital attemps I noted that the solutions looked like the results from pertubation theory in quantum mechanics where the Hamiltonian is $B$ the pertubation is $C$ and the quantum states are the eigenvectors. Define a pertubed system $B + \Delta t C$ with eigenvectors $\vec{w}_{\lambda_k}(\Delta t)$ and eigenvalues $\lambda_k(\Delta t)$. Expand the eigenvectors and eigenvalues in terms of $\Delta t$.
+
+$$\lambda_k(\Delta t) = \lambda_{0, k} + \Delta t\lambda_{1, k} + \Delta t^2\lambda_{2, k} + \mathcal{O}(\Delta t^3)$$
+$$\vec{w}_{\lambda_k}(\Delta t) = \vec{w}_{\lambda_{0, k}} + \Delta t\vec{w}_{\lambda_{1, k}} + \Delta t^2\vec{w}_{\lambda_{2, k}} + \mathcal{O}(\Delta t^3)$$
+$$\left( B + \Delta tC \right)\vec{w}_{\lambda_k}(\Delta t) = \lambda_{k}(\Delta t)\vec{w}_{\lambda_k}(\Delta t)$$
+$$\left( B + \Delta tC \right)\left[ \vec{w}_{\lambda_{0, k}} + \Delta t\vec{w}_{\lambda_{1, k}} + \Delta t^2\vec{w}_{\lambda_{2, k}} + \mathcal{O}(\Delta t^3) \right] = \left[ \lambda_{0, k} + \Delta t\lambda_{1, k} + \Delta t^2\lambda_{2, k} + \mathcal{O}(\Delta t^3) \right] \left[ \vec{w}_{\lambda_{0, k}} + \Delta t\vec{w}_{\lambda_{1, k}} + \Delta t^2\vec{w}_{\lambda_{2, k}} + \mathcal{O}(\Delta t^3) \right]$$
+
+Collecting like terms of $\Delta t$ then gives the following system of equations to define the various corrections to the eigenvectors and eigenvalues.
+
+$$\begin{align}
+B \vec{w}_{\lambda_{0, k}} & = \lambda_{0, k}\vec{w}_{\lambda_{0, k}} \\
+B \vec{w}_{\lambda_{1, k}} + C\vec{w}_{\lambda_{0, k}} & = \lambda_{0, k}\vec{w}_{\lambda_{1, k}} + \lambda_{1, k}\vec{w}_{\lambda_{0, k}} \\
+B \vec{w}_{\lambda_{2, k}} + C\vec{w}_{\lambda_{1, k}} & = \lambda_{0, k}\vec{w}_{\lambda_{2, k}} + \lambda_{1, k}\vec{w}_{\lambda_{1, k}} + \lambda_{2, k}\vec{w}_{\lambda_{0, k}} \\
+& \cdots
+\end{align}$$
